@@ -62,14 +62,12 @@ class SlickCountryRepository(db: MySQLProfile.backend.Database)(implicit ec: Exe
     db.run(insertCountriesQuery).map(_.toList)
   }
 
-  override def update(country: Country): Future[Unit] = {
-    val id                   = country.id
-    val updateNameQuery      = countryTable.filter(_.id === id).map(_.name).update(country.name)
-    val updateCodeQuery      = countryTable.filter(_.id === id).map(_.countryCode).update(country.countryCode)
-    val updateContinentQuery = countryTable.filter(_.id === id).map(_.continent).update(country.continent)
-
-    val updateCountryQuery = DBIO.seq(updateNameQuery, updateCodeQuery, updateContinentQuery)
-    db.run(updateCountryQuery.transactionally)
+  override def update(country: Country): Future[Int] = {
+    val updateCountryQuery = countryTable
+      .filter(_.id === country.id)
+      .map(country => (country.name, country.countryCode, country.continent))
+      .update((country.name, country.countryCode, country.continent))
+    db.run(updateCountryQuery)
   }
 
   override def delete(id: CountryId): Future[Int] = {

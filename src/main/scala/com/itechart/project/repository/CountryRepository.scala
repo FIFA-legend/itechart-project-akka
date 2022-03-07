@@ -11,7 +11,7 @@ trait CountryRepository {
   def findById(id:         CountryId):     Future[Option[Country]]
   def create(country:      Country):       Future[CountryId]
   def createAll(countries: List[Country]): Future[List[CountryId]]
-  def update(country:      Country):       Future[Unit]
+  def update(country:      Country):       Future[Int]
   def delete(id:           CountryId):     Future[Int]
 }
 
