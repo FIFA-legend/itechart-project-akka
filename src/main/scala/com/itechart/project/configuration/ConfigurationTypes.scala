@@ -8,7 +8,8 @@ object ConfigurationTypes {
     url:               String,
     user:              String,
     password:          String,
-    migrationLocation: String
+    migrationLocation: String,
+    configurationName: String
   )
 
 }

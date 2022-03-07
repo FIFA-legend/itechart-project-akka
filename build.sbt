@@ -27,8 +27,9 @@ val akkaPersistenceVersion = "3.5.3"
 val scalaTestVersion       = "3.2.9"
 val mySqlVersion           = "8.0.28"
 val jwtVersion             = "5.0.0"
-val flywayVersion          = "8.5.0"
+val flywayVersion          = "8.5.1"
 val refinedVersion         = "0.9.28"
+val slickVersion           = "3.3.3"
 
 libraryDependencies ++= Seq(
   // akka essentials
@@ -48,8 +49,19 @@ libraryDependencies ++= Seq(
   // JWT
   "com.pauldijou" %% "jwt-spray-json" % jwtVersion,
   // MySQL connector
-  "mysql"        % "mysql-connector-java" % mySqlVersion,
-  "org.flywaydb" % "flyway-core"          % flywayVersion,
+  "mysql" % "mysql-connector-java" % mySqlVersion,
+  // database migrator
+  "org.flywaydb" % "flyway-core" % flywayVersion,
+  // Slick
+  "com.typesafe.slick" %% "slick"          % slickVersion,
+  "com.typesafe.slick" %% "slick-hikaricp" % slickVersion,
+  "com.typesafe.slick" %% "slick-codegen"  % slickVersion,
   // Type safety
   "eu.timepit" %% "refined" % refinedVersion,
 )
+
+addCompilerPlugin(
+  "org.typelevel" %% "kind-projector" % "0.13.2" cross CrossVersion.full
+)
+
+run / fork := true
