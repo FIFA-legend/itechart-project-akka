@@ -8,9 +8,9 @@ import java.sql.Date
 
 object season {
 
-  final case class SeasonId(value: Long)
+  final case class SeasonId(value: Int)
 
-  type SeasonName = String Refined MatchesRegex[W.`"^[0-9]{2}/[0-9]{2}$"`.T]
+  type SeasonName = String Refined MatchesRegex[W.`"^[0-9]{4}/[0-9]{4}$"`.T]
 
   final case class Season(
     id:        SeasonId,

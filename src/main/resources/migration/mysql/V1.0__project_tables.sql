@@ -25,7 +25,7 @@ CREATE TABLE IF NOT EXISTS leagues (
 
 CREATE TABLE IF NOT EXISTS seasons (
 	id BIGINT AUTO_INCREMENT,
-    name VARCHAR(5) NOT NULL,
+    name VARCHAR(9) NOT NULL,
     is_current BOOLEAN NOT NULL,
     start_date DATETIME NOT NULL,
     end_date DATETIME NOT NULL,
