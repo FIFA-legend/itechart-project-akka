@@ -49,7 +49,7 @@ class SlickCountryRepository(db: MySQLProfile.backend.Database)(implicit ec: Exe
 
   override def findById(id: CountryId): Future[Option[Country]] = {
     val countryQuery = countryTable.filter(_.id === id)
-    db.run[Seq[Country]](countryQuery.result).map(_.toList).map(_.headOption)
+    db.run[Seq[Country]](countryQuery.result).map(_.headOption)
   }
 
   override def create(country: Country): Future[CountryId] = {
