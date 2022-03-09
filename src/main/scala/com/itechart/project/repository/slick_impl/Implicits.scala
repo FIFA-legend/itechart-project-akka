@@ -3,10 +3,14 @@ package com.itechart.project.repository.slick_impl
 import com.itechart.project.domain.country.{Continent, CountryCode, CountryId, CountryName}
 import com.itechart.project.domain.formation.{FormationId, FormationName}
 import com.itechart.project.domain.league.LeagueId
+import com.itechart.project.domain.referee.RefereeId
 import com.itechart.project.domain.season.{SeasonId, SeasonName}
 import com.itechart.project.domain.team.{ShortCode, TeamId, TeamLogo}
 import com.itechart.project.utils.RefinedConversions.convertParameter
+import eu.timepit.refined.W
+import eu.timepit.refined.api.Refined
 import eu.timepit.refined.auto._
+import eu.timepit.refined.string.MatchesRegex
 import eu.timepit.refined.types.string.NonEmptyString
 import slick.ast.BaseTypedType
 import slick.jdbc.JdbcType
@@ -14,8 +18,12 @@ import slick.jdbc.MySQLProfile.api._
 
 object Implicits {
 
+  type Image = String Refined MatchesRegex[W.`"^[0-9]+.(png|jpg|jpeg)$"`.T]
+
   implicit val nonEmptyStringTypeMapper: JdbcType[NonEmptyString] with BaseTypedType[NonEmptyString] =
     MappedColumnType.base[NonEmptyString, String](_.value, convertParameter(_, "Default Non-empty String"))
+  implicit val imageTypeMapper: JdbcType[Image] with BaseTypedType[Image] =
+    MappedColumnType.base[Image, String](_.value, convertParameter(_, "0.png"))
 
   implicit val countryIdTypeMapper: JdbcType[CountryId] with BaseTypedType[CountryId] =
     MappedColumnType.base[CountryId, Int](_.value, CountryId)
@@ -86,7 +94,7 @@ object Implicits {
     MappedColumnType.base[TeamId, Long](_.value, TeamId)
   implicit val shortCodeTypeMapper: JdbcType[ShortCode] with BaseTypedType[ShortCode] =
     MappedColumnType.base[ShortCode, String](_.value, convertParameter(_, "XXX"))
-  implicit val logoTypeMapper: JdbcType[TeamLogo] with BaseTypedType[TeamLogo] =
-    MappedColumnType.base[TeamLogo, String](_.value, convertParameter(_, "0.png"))
 
+  implicit val refereeIdTypeMapper: JdbcType[RefereeId] with BaseTypedType[RefereeId] =
+    MappedColumnType.base[RefereeId, Long](_.value, RefereeId)
 }

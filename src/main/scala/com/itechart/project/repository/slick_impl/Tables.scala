@@ -3,6 +3,7 @@ package com.itechart.project.repository.slick_impl
 import com.itechart.project.domain.country.{Continent, Country, CountryCode, CountryId, CountryName}
 import com.itechart.project.domain.formation.{Formation, FormationId, FormationName}
 import com.itechart.project.domain.league.{League, LeagueId, LeagueName}
+import com.itechart.project.domain.referee.{Referee, RefereeFirstName, RefereeId, RefereeImage, RefereeLastName}
 import com.itechart.project.domain.season.{Season, SeasonId, SeasonName}
 import com.itechart.project.domain.team.{ShortCode, Team, TeamId, TeamLogo, TeamName}
 import com.itechart.project.repository.slick_impl.Implicits._
@@ -39,6 +40,20 @@ object Tables {
     )
   }
 
+  class RefereeTable(tag: Tag) extends Table[Referee](tag, None, "referees") {
+    override def * = (id, firstName, lastName, image, countryId) <> (Referee.tupled, Referee.unapply)
+    val id:        Rep[RefereeId]            = column[RefereeId]("id", O.AutoInc, O.PrimaryKey)
+    val firstName: Rep[RefereeFirstName]     = column[RefereeFirstName]("first_name", O.Unique)
+    val lastName:  Rep[RefereeLastName]      = column[RefereeLastName]("last_name", O.Unique)
+    val image:     Rep[Option[RefereeImage]] = column[Option[RefereeImage]]("image", O.Unique)
+    val countryId: Rep[CountryId]            = column[CountryId]("country_id")
+    val country = foreignKey("FK_referees_countries", countryId, countryTable)(
+      _.id,
+      onUpdate = ForeignKeyAction.Cascade,
+      onDelete = ForeignKeyAction.Restrict
+    )
+  }
+
   class SeasonTable(tag: Tag) extends Table[Season](tag, None, "seasons") {
     override def * = (id, name, isCurrent, startDate, endDate) <> (Season.tupled, Season.unapply)
     val id:        Rep[SeasonId]   = column[SeasonId]("id", O.AutoInc, O.PrimaryKey)
@@ -67,6 +82,8 @@ object Tables {
   val formationTable = TableQuery[FormationTable]
 
   val leagueTable = TableQuery[LeagueTable]
+
+  val refereeTable = TableQuery[RefereeTable]
 
   val seasonTable = TableQuery[SeasonTable]
 

@@ -10,16 +10,16 @@ object referee {
 
   final case class RefereeId(value: Long)
 
-  type FirstName = NonEmptyString
+  type RefereeFirstName = NonEmptyString
 
-  type LastName = NonEmptyString
+  type RefereeLastName = NonEmptyString
 
-  type RefereeImage = String Refined MatchesRegex[W.`"^[0-9]+.[png|jpg|jpeg]$"`.T]
+  type RefereeImage = String Refined MatchesRegex[W.`"^[0-9]+.(png|jpg|jpeg)$"`.T]
 
   final case class Referee(
     id:        RefereeId,
-    firstName: FirstName,
-    lastName:  LastName,
+    firstName: RefereeFirstName,
+    lastName:  RefereeLastName,
     image:     Option[RefereeImage],
     countryId: CountryId
   )
