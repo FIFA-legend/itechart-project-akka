@@ -14,7 +14,7 @@ object team {
 
   type ShortCode = String Refined MatchesRegex[W.`"^[A-Z]{3}$"`.T]
 
-  type TeamLogo = String Refined MatchesRegex[W.`"^[0-9]+.[png|jpg|jpeg]$"`.T]
+  type TeamLogo = String Refined MatchesRegex[W.`"^[0-9]+.(png|jpg|jpeg)$"`.T]
 
   final case class Team(
     id:        TeamId,

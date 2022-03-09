@@ -4,6 +4,7 @@ import com.itechart.project.domain.country.{Continent, Country, CountryCode, Cou
 import com.itechart.project.domain.formation.{Formation, FormationId, FormationName}
 import com.itechart.project.domain.league.{League, LeagueId, LeagueName}
 import com.itechart.project.domain.season.{Season, SeasonId, SeasonName}
+import com.itechart.project.domain.team.{ShortCode, Team, TeamId, TeamLogo, TeamName}
 import com.itechart.project.repository.slick_impl.Implicits._
 import slick.lifted.TableQuery
 import slick.jdbc.MySQLProfile.api._
@@ -47,6 +48,20 @@ object Tables {
     val endDate:   Rep[Date]       = column[Date]("end_date")
   }
 
+  class TeamTable(tag: Tag) extends Table[Team](tag, None, "teams") {
+    override def * = (id, name, shortCode, logo, countryId) <> (Team.tupled, Team.unapply)
+    val id:        Rep[TeamId]    = column[TeamId]("id", O.AutoInc, O.PrimaryKey)
+    val name:      Rep[TeamName]  = column[TeamName]("name")
+    val shortCode: Rep[ShortCode] = column[ShortCode]("short_code")
+    val logo:      Rep[TeamLogo]  = column[TeamLogo]("logo")
+    val countryId: Rep[CountryId] = column[CountryId]("country_id")
+    def country = foreignKey("FK_teams_countries", countryId, countryTable)(
+      _.id,
+      onUpdate = ForeignKeyAction.Cascade,
+      onDelete = ForeignKeyAction.Restrict
+    )
+  }
+
   val countryTable = TableQuery[CountryTable]
 
   val formationTable = TableQuery[FormationTable]
@@ -54,4 +69,6 @@ object Tables {
   val leagueTable = TableQuery[LeagueTable]
 
   val seasonTable = TableQuery[SeasonTable]
+
+  val teamTable = TableQuery[TeamTable]
 }

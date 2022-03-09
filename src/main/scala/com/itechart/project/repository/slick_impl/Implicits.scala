@@ -2,15 +2,20 @@ package com.itechart.project.repository.slick_impl
 
 import com.itechart.project.domain.country.{Continent, CountryCode, CountryId, CountryName}
 import com.itechart.project.domain.formation.{FormationId, FormationName}
-import com.itechart.project.domain.league.{LeagueId, LeagueName}
+import com.itechart.project.domain.league.LeagueId
 import com.itechart.project.domain.season.{SeasonId, SeasonName}
+import com.itechart.project.domain.team.{ShortCode, TeamId, TeamLogo}
 import com.itechart.project.utils.RefinedConversions.convertParameter
+import eu.timepit.refined.auto._
+import eu.timepit.refined.types.string.NonEmptyString
 import slick.ast.BaseTypedType
 import slick.jdbc.JdbcType
 import slick.jdbc.MySQLProfile.api._
-import eu.timepit.refined.auto._
 
 object Implicits {
+
+  implicit val nonEmptyStringTypeMapper: JdbcType[NonEmptyString] with BaseTypedType[NonEmptyString] =
+    MappedColumnType.base[NonEmptyString, String](_.value, convertParameter(_, "Default Non-empty String"))
 
   implicit val countryIdTypeMapper: JdbcType[CountryId] with BaseTypedType[CountryId] =
     MappedColumnType.base[CountryId, Int](_.value, CountryId)
@@ -71,12 +76,17 @@ object Implicits {
 
   implicit val leagueIdTypeMapper: JdbcType[LeagueId] with BaseTypedType[LeagueId] =
     MappedColumnType.base[LeagueId, Int](_.value, LeagueId)
-  implicit val leagueNameTypeMapper: JdbcType[LeagueName] with BaseTypedType[LeagueName] =
-    MappedColumnType.base[LeagueName, String](_.value, convertParameter(_, "Bundesliga"))
 
   implicit val seasonIdTypeMapper: JdbcType[SeasonId] with BaseTypedType[SeasonId] =
     MappedColumnType.base[SeasonId, Int](_.value, SeasonId)
   implicit val seasonNameTypeMapper: JdbcType[SeasonName] with BaseTypedType[SeasonName] =
     MappedColumnType.base[SeasonName, String](_.value, convertParameter(_, "2021/2022"))
+
+  implicit val teamIdTypeMapper: JdbcType[TeamId] with BaseTypedType[TeamId] =
+    MappedColumnType.base[TeamId, Long](_.value, TeamId)
+  implicit val shortCodeTypeMapper: JdbcType[ShortCode] with BaseTypedType[ShortCode] =
+    MappedColumnType.base[ShortCode, String](_.value, convertParameter(_, "XXX"))
+  implicit val logoTypeMapper: JdbcType[TeamLogo] with BaseTypedType[TeamLogo] =
+    MappedColumnType.base[TeamLogo, String](_.value, convertParameter(_, "0.png"))
 
 }
