@@ -6,7 +6,7 @@ import eu.timepit.refined.string.MatchesRegex
 
 object country {
 
-  final case class CountryId(value: Long)
+  final case class CountryId(value: Int)
 
   type CountryName = String Refined MatchesRegex[W.`"^[A-Z][A-Za-z]+$"`.T]
 

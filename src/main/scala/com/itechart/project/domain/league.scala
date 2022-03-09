@@ -5,7 +5,7 @@ import eu.timepit.refined.types.string.NonEmptyString
 
 object league {
 
-  final case class LeagueId(value: Long)
+  final case class LeagueId(value: Int)
 
   type LeagueName = NonEmptyString
 

@@ -8,7 +8,7 @@ CREATE TABLE IF NOT EXISTS users (
 );
 
 CREATE TABLE IF NOT EXISTS countries (
-	id BIGINT AUTO_INCREMENT,
+	id INT AUTO_INCREMENT,
     name VARCHAR(50) NOT NULL,
     country_code VARCHAR(2) NOT NULL,
     continent VARCHAR(15) NOT NULL,
@@ -16,9 +16,9 @@ CREATE TABLE IF NOT EXISTS countries (
 );
 
 CREATE TABLE IF NOT EXISTS leagues (
-	id BIGINT AUTO_INCREMENT,
+	id INT AUTO_INCREMENT,
     name VARCHAR(50) NOT NULL,
-    country_id BIGINT NOT NULL,
+    country_id INT NOT NULL,
     PRIMARY KEY (id),
     FOREIGN KEY (country_id) REFERENCES countries(id)
 );
@@ -37,7 +37,7 @@ CREATE TABLE IF NOT EXISTS teams (
     name VARCHAR(20) NOT NULL,
     short_code VARCHAR(3) NOT NULL,
     logo VARCHAR(20) NOT NULL,
-    country_id BIGINT NOT NULL,
+    country_id INT NOT NULL,
     PRIMARY KEY (id),
     FOREIGN KEY (country_id) REFERENCES countries(id)
 );
@@ -57,7 +57,7 @@ CREATE TABLE IF NOT EXISTS players (
     weight SMALLINT,
     height SMALLINT,
     image VARCHAR(20),
-    country_id BIGINT NOT NULL,
+    country_id INT NOT NULL,
     PRIMARY KEY (id),
     FOREIGN KEY (country_id) REFERENCES countries(id)
 );
@@ -67,7 +67,7 @@ CREATE TABLE IF NOT EXISTS referees (
     first_name VARCHAR(50) NOT NULL,
     last_name VARCHAR(50) NOT NULL,
     image VARCHAR(20),
-    country_id BIGINT NOT NULL,
+    country_id INT NOT NULL,
     PRIMARY KEY (id),
     FOREIGN KEY (country_id) REFERENCES countries(id)
 );
@@ -77,7 +77,7 @@ CREATE TABLE IF NOT EXISTS venues (
     name VARCHAR(50) NOT NULL,
     capacity INT NOT NULL,
     city VARCHAR(50) NOT NULL,
-    country_id BIGINT NOT NULL,
+    country_id INT NOT NULL,
     PRIMARY KEY (id),
     FOREIGN KEY (country_id) REFERENCES countries(id)
 );
@@ -94,7 +94,7 @@ CREATE TABLE IF NOT EXISTS stats (
 
 CREATE TABLE IF NOT EXISTS matches (
 	id BIGINT AUTO_INCREMENT,
-    league_id BIGINT NOT NULL,
+    league_id INT NOT NULL,
     season_id BIGINT NOT NULL,
     status_code SMALLINT NOT NULL,
     status VARCHAR(50) NOT NULL,
