@@ -6,10 +6,12 @@ import com.itechart.project.domain.league.LeagueId
 import com.itechart.project.domain.referee.RefereeId
 import com.itechart.project.domain.season.{SeasonId, SeasonName}
 import com.itechart.project.domain.team.{TeamId, TeamShortName}
+import com.itechart.project.domain.venue.VenueId
 import com.itechart.project.utils.RefinedConversions.convertParameter
 import eu.timepit.refined.W
 import eu.timepit.refined.api.Refined
 import eu.timepit.refined.auto._
+import eu.timepit.refined.numeric.NonNegative
 import eu.timepit.refined.string.MatchesRegex
 import eu.timepit.refined.types.string.NonEmptyString
 import slick.ast.BaseTypedType
@@ -22,6 +24,8 @@ object Implicits {
 
   implicit val nonEmptyStringTypeMapper: JdbcType[NonEmptyString] with BaseTypedType[NonEmptyString] =
     MappedColumnType.base[NonEmptyString, String](_.value, convertParameter(_, "Default Non-empty String"))
+  implicit val nonNegativeTypeMapper: JdbcType[Int Refined NonNegative] with BaseTypedType[Int Refined NonNegative] =
+    MappedColumnType.base[Int Refined NonNegative, Int](_.value, convertParameter(_, 0))
   implicit val imageTypeMapper: JdbcType[Image] with BaseTypedType[Image] =
     MappedColumnType.base[Image, String](_.value, convertParameter(_, "0.png"))
 
@@ -97,4 +101,7 @@ object Implicits {
 
   implicit val refereeIdTypeMapper: JdbcType[RefereeId] with BaseTypedType[RefereeId] =
     MappedColumnType.base[RefereeId, Int](_.value, RefereeId)
+
+  implicit val venueIdTypeMapper: JdbcType[VenueId] with BaseTypedType[VenueId] =
+    MappedColumnType.base[VenueId, Int](_.value, VenueId)
 }

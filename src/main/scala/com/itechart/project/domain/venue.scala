@@ -1,16 +1,17 @@
 package com.itechart.project.domain
 
 import com.itechart.project.domain.country.CountryId
+import eu.timepit.refined.api.Refined
 import eu.timepit.refined.numeric.NonNegative
 import eu.timepit.refined.types.string.NonEmptyString
 
 object venue {
 
-  final case class VenueId(value: Long)
+  final case class VenueId(value: Int)
 
   type VenueName = NonEmptyString
 
-  type Capacity = NonNegative
+  type Capacity = Int Refined NonNegative
 
   type VenueCity = NonEmptyString
 
