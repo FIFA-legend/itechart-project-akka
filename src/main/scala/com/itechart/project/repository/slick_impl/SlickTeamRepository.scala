@@ -1,7 +1,7 @@
 package com.itechart.project.repository.slick_impl
 
 import com.itechart.project.domain.country.Country
-import com.itechart.project.domain.team.{Team, TeamId, TeamName}
+import com.itechart.project.domain.team.{Team, TeamFullName, TeamId}
 import com.itechart.project.repository.TeamRepository
 import com.itechart.project.repository.slick_impl.Implicits._
 import com.itechart.project.repository.slick_impl.Tables._
@@ -22,8 +22,8 @@ class SlickTeamRepository(db: MySQLProfile.backend.Database)(implicit ec: Execut
     db.run[Seq[Team]](teamByIdQuery.result).map(_.headOption)
   }
 
-  override def findByName(name: TeamName): Future[List[Team]] = {
-    val teamsByNameQuery = teamTable.filter(_.name === name)
+  override def findByName(name: TeamFullName): Future[List[Team]] = {
+    val teamsByNameQuery = teamTable.filter(_.fullName === name)
     db.run[Seq[Team]](teamsByNameQuery.result).map(_.toList)
   }
 
@@ -45,7 +45,7 @@ class SlickTeamRepository(db: MySQLProfile.backend.Database)(implicit ec: Execut
   override def update(team: Team): Future[Int] = {
     val updateTeamQuery = teamTable
       .filter(_.id === team.id)
-      .map(team => (team.name, team.shortCode, team.logo, team.countryId))
+      .map(team => (team.fullName, team.shortName, team.logo, team.countryId))
       .update((team.name, team.shortCode, team.logo, team.countryId))
     db.run(updateTeamQuery)
   }

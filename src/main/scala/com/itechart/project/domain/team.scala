@@ -8,19 +8,19 @@ import eu.timepit.refined.types.string.NonEmptyString
 
 object team {
 
-  final case class TeamId(value: Long)
+  final case class TeamId(value: Int)
 
-  type TeamName = NonEmptyString
+  type TeamFullName = NonEmptyString
 
-  type ShortCode = String Refined MatchesRegex[W.`"^[A-Z]{3}$"`.T]
+  type TeamShortName = String Refined MatchesRegex[W.`"^[A-Z]{3}$"`.T]
 
   type TeamLogo = String Refined MatchesRegex[W.`"^[0-9]+.(png|jpg|jpeg)$"`.T]
 
   final case class Team(
     id:        TeamId,
-    name:      TeamName,
-    shortCode: ShortCode,
-    logo:      TeamLogo,
+    name:      TeamFullName,
+    shortCode: TeamShortName,
+    logo:      Option[TeamLogo],
     countryId: CountryId
   )
 

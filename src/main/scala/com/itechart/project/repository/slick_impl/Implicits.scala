@@ -5,7 +5,7 @@ import com.itechart.project.domain.formation.{FormationId, FormationName}
 import com.itechart.project.domain.league.LeagueId
 import com.itechart.project.domain.referee.RefereeId
 import com.itechart.project.domain.season.{SeasonId, SeasonName}
-import com.itechart.project.domain.team.{ShortCode, TeamId, TeamLogo}
+import com.itechart.project.domain.team.{TeamId, TeamShortName}
 import com.itechart.project.utils.RefinedConversions.convertParameter
 import eu.timepit.refined.W
 import eu.timepit.refined.api.Refined
@@ -91,10 +91,10 @@ object Implicits {
     MappedColumnType.base[SeasonName, String](_.value, convertParameter(_, "2021/2022"))
 
   implicit val teamIdTypeMapper: JdbcType[TeamId] with BaseTypedType[TeamId] =
-    MappedColumnType.base[TeamId, Long](_.value, TeamId)
-  implicit val shortCodeTypeMapper: JdbcType[ShortCode] with BaseTypedType[ShortCode] =
-    MappedColumnType.base[ShortCode, String](_.value, convertParameter(_, "XXX"))
+    MappedColumnType.base[TeamId, Int](_.value, TeamId)
+  implicit val shortCodeTypeMapper: JdbcType[TeamShortName] with BaseTypedType[TeamShortName] =
+    MappedColumnType.base[TeamShortName, String](_.value, convertParameter(_, "XXX"))
 
   implicit val refereeIdTypeMapper: JdbcType[RefereeId] with BaseTypedType[RefereeId] =
-    MappedColumnType.base[RefereeId, Long](_.value, RefereeId)
+    MappedColumnType.base[RefereeId, Int](_.value, RefereeId)
 }

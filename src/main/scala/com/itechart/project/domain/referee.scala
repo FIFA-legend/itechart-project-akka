@@ -8,7 +8,7 @@ import eu.timepit.refined.types.string.NonEmptyString
 
 object referee {
 
-  final case class RefereeId(value: Long)
+  final case class RefereeId(value: Int)
 
   type RefereeFirstName = NonEmptyString
 

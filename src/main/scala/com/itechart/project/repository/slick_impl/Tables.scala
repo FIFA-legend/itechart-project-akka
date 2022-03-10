@@ -5,7 +5,7 @@ import com.itechart.project.domain.formation.{Formation, FormationId, FormationN
 import com.itechart.project.domain.league.{League, LeagueId, LeagueName}
 import com.itechart.project.domain.referee.{Referee, RefereeFirstName, RefereeId, RefereeImage, RefereeLastName}
 import com.itechart.project.domain.season.{Season, SeasonId, SeasonName}
-import com.itechart.project.domain.team.{ShortCode, Team, TeamId, TeamLogo, TeamName}
+import com.itechart.project.domain.team.{Team, TeamFullName, TeamId, TeamLogo, TeamShortName}
 import com.itechart.project.repository.slick_impl.Implicits._
 import slick.lifted.TableQuery
 import slick.jdbc.MySQLProfile.api._
@@ -18,7 +18,7 @@ object Tables {
     override def * = (id, name, countryCode, continent) <> (Country.tupled, Country.unapply)
     val id:          Rep[CountryId]   = column[CountryId]("id", O.AutoInc, O.PrimaryKey)
     val name:        Rep[CountryName] = column[CountryName]("name")
-    val countryCode: Rep[CountryCode] = column[CountryCode]("country_code")
+    val countryCode: Rep[CountryCode] = column[CountryCode]("code")
     val continent:   Rep[Continent]   = column[Continent]("continent")
   }
 
@@ -33,9 +33,9 @@ object Tables {
     val id:        Rep[LeagueId]   = column[LeagueId]("id", O.AutoInc, O.PrimaryKey)
     val name:      Rep[LeagueName] = column[LeagueName]("name", O.Unique)
     val countryId: Rep[CountryId]  = column[CountryId]("country_id")
-    val country = foreignKey("FK_seasons_countries", countryId, countryTable)(
+    val country = foreignKey("FK_leagues_countries", countryId, countryTable)(
       _.id,
-      onUpdate = ForeignKeyAction.Cascade,
+      onUpdate = ForeignKeyAction.Restrict,
       onDelete = ForeignKeyAction.Restrict
     )
   }
@@ -49,7 +49,7 @@ object Tables {
     val countryId: Rep[CountryId]            = column[CountryId]("country_id")
     val country = foreignKey("FK_referees_countries", countryId, countryTable)(
       _.id,
-      onUpdate = ForeignKeyAction.Cascade,
+      onUpdate = ForeignKeyAction.Restrict,
       onDelete = ForeignKeyAction.Restrict
     )
   }
@@ -64,15 +64,15 @@ object Tables {
   }
 
   class TeamTable(tag: Tag) extends Table[Team](tag, None, "teams") {
-    override def * = (id, name, shortCode, logo, countryId) <> (Team.tupled, Team.unapply)
-    val id:        Rep[TeamId]    = column[TeamId]("id", O.AutoInc, O.PrimaryKey)
-    val name:      Rep[TeamName]  = column[TeamName]("name")
-    val shortCode: Rep[ShortCode] = column[ShortCode]("short_code")
-    val logo:      Rep[TeamLogo]  = column[TeamLogo]("logo")
-    val countryId: Rep[CountryId] = column[CountryId]("country_id")
+    override def * = (id, fullName, shortName, logo, countryId) <> (Team.tupled, Team.unapply)
+    val id:        Rep[TeamId]           = column[TeamId]("id", O.AutoInc, O.PrimaryKey)
+    val fullName:  Rep[TeamFullName]     = column[TeamFullName]("full_name")
+    val shortName: Rep[TeamShortName]    = column[TeamShortName]("short_name")
+    val logo:      Rep[Option[TeamLogo]] = column[Option[TeamLogo]]("logo")
+    val countryId: Rep[CountryId]        = column[CountryId]("country_id")
     def country = foreignKey("FK_teams_countries", countryId, countryTable)(
       _.id,
-      onUpdate = ForeignKeyAction.Cascade,
+      onUpdate = ForeignKeyAction.Restrict,
       onDelete = ForeignKeyAction.Restrict
     )
   }
