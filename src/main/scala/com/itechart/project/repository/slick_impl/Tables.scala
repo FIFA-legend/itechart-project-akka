@@ -5,6 +5,7 @@ import com.itechart.project.domain.formation.{Formation, FormationId, FormationN
 import com.itechart.project.domain.league.{League, LeagueId, LeagueName}
 import com.itechart.project.domain.referee.{Referee, RefereeFirstName, RefereeId, RefereeImage, RefereeLastName}
 import com.itechart.project.domain.season.{Season, SeasonId, SeasonName}
+import com.itechart.project.domain.stage.{Stage, StageId, StageName}
 import com.itechart.project.domain.team.{Team, TeamFullName, TeamId, TeamLogo, TeamShortName}
 import com.itechart.project.domain.venue.{Capacity, Venue, VenueCity, VenueId, VenueName}
 import com.itechart.project.repository.slick_impl.Implicits._
@@ -64,6 +65,12 @@ object Tables {
     val endDate:   Rep[Date]       = column[Date]("end_date")
   }
 
+  class StageTable(tag: Tag) extends Table[Stage](tag, None, "stages") {
+    override def * = (id, name) <> (Stage.tupled, Stage.unapply)
+    val id:   Rep[StageId]   = column[StageId]("id", O.AutoInc, O.PrimaryKey)
+    val name: Rep[StageName] = column[StageName]("name")
+  }
+
   class TeamTable(tag: Tag) extends Table[Team](tag, None, "teams") {
     override def * = (id, fullName, shortName, logo, countryId) <> (Team.tupled, Team.unapply)
     val id:        Rep[TeamId]           = column[TeamId]("id", O.AutoInc, O.PrimaryKey)
@@ -101,6 +108,8 @@ object Tables {
   val refereeTable = TableQuery[RefereeTable]
 
   val seasonTable = TableQuery[SeasonTable]
+
+  val stageTable = TableQuery[StageTable]
 
   val teamTable = TableQuery[TeamTable]
 

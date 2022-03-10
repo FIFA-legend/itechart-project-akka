@@ -5,6 +5,7 @@ import com.itechart.project.domain.formation.{FormationId, FormationName}
 import com.itechart.project.domain.league.LeagueId
 import com.itechart.project.domain.referee.RefereeId
 import com.itechart.project.domain.season.{SeasonId, SeasonName}
+import com.itechart.project.domain.stage.StageId
 import com.itechart.project.domain.team.{TeamId, TeamShortName}
 import com.itechart.project.domain.venue.VenueId
 import com.itechart.project.utils.RefinedConversions.convertParameter
@@ -104,4 +105,7 @@ object Implicits {
 
   implicit val venueIdTypeMapper: JdbcType[VenueId] with BaseTypedType[VenueId] =
     MappedColumnType.base[VenueId, Int](_.value, VenueId)
+
+  implicit val stageIdTypeMapper: JdbcType[StageId] with BaseTypedType[StageId] =
+    MappedColumnType.base[StageId, Int](_.value, StageId)
 }
