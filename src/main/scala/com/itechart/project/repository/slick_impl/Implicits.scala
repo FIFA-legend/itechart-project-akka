@@ -3,6 +3,7 @@ package com.itechart.project.repository.slick_impl
 import com.itechart.project.domain.country.{Continent, CountryCode, CountryId, CountryName}
 import com.itechart.project.domain.formation.{FormationId, FormationName}
 import com.itechart.project.domain.league.LeagueId
+import com.itechart.project.domain.player.PlayerId
 import com.itechart.project.domain.referee.RefereeId
 import com.itechart.project.domain.season.{SeasonId, SeasonName}
 import com.itechart.project.domain.stage.StageId
@@ -12,7 +13,7 @@ import com.itechart.project.utils.RefinedConversions.convertParameter
 import eu.timepit.refined.W
 import eu.timepit.refined.api.Refined
 import eu.timepit.refined.auto._
-import eu.timepit.refined.numeric.NonNegative
+import eu.timepit.refined.numeric.{GreaterEqual, NonNegative}
 import eu.timepit.refined.string.MatchesRegex
 import eu.timepit.refined.types.string.NonEmptyString
 import slick.ast.BaseTypedType
@@ -108,4 +109,16 @@ object Implicits {
 
   implicit val stageIdTypeMapper: JdbcType[StageId] with BaseTypedType[StageId] =
     MappedColumnType.base[StageId, Int](_.value, StageId)
+
+  implicit val playerIdTypeMapper: JdbcType[PlayerId] with BaseTypedType[PlayerId] =
+    MappedColumnType.base[PlayerId, Long](_.value, PlayerId)
+  implicit val ageTypeMapper: JdbcType[Int Refined GreaterEqual[16]] with BaseTypedType[Int Refined GreaterEqual[16]] =
+    MappedColumnType.base[Int Refined GreaterEqual[16], Int](_.value, convertParameter(_, 16))
+  implicit val weightTypeMapper
+    : JdbcType[Int Refined GreaterEqual[40]] with BaseTypedType[Int Refined GreaterEqual[40]] =
+    MappedColumnType.base[Int Refined GreaterEqual[40], Int](_.value, convertParameter(_, 40))
+  implicit val heightTypeMapper
+    : JdbcType[Int Refined GreaterEqual[100]] with BaseTypedType[Int Refined GreaterEqual[100]] =
+    MappedColumnType.base[Int Refined GreaterEqual[100], Int](_.value, convertParameter(_, 100))
+
 }

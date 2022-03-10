@@ -21,9 +21,9 @@ object player {
 
   type Weight = Int Refined GreaterEqual[40]
 
-  type Height = Int Refined GreaterEqual[140]
+  type Height = Int Refined GreaterEqual[100]
 
-  type PlayerImage = String Refined MatchesRegex[W.`"^[0-9]+.[png|jpg|jpeg]$"`.T]
+  type PlayerImage = String Refined MatchesRegex[W.`"^[0-9]+.(png|jpg|jpeg)$"`.T]
 
   final case class Player(
     id:        PlayerId,

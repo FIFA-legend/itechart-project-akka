@@ -3,6 +3,7 @@ package com.itechart.project.repository.slick_impl
 import com.itechart.project.domain.country.{Continent, Country, CountryCode, CountryId, CountryName}
 import com.itechart.project.domain.formation.{Formation, FormationId, FormationName}
 import com.itechart.project.domain.league.{League, LeagueId, LeagueName}
+import com.itechart.project.domain.player.{Age, FirstName, Height, LastName, Player, PlayerId, PlayerImage, Weight}
 import com.itechart.project.domain.referee.{Referee, RefereeFirstName, RefereeId, RefereeImage, RefereeLastName}
 import com.itechart.project.domain.season.{Season, SeasonId, SeasonName}
 import com.itechart.project.domain.stage.{Stage, StageId, StageName}
@@ -42,12 +43,31 @@ object Tables {
     )
   }
 
+  class PlayerTable(tag: Tag) extends Table[Player](tag, None, "players") {
+    override def * =
+      (id, firstName, lastName, birthday, age, weight, height, image, countryId) <> (Player.tupled, Player.unapply)
+    val id:        Rep[PlayerId]            = column[PlayerId]("id", O.AutoInc, O.PrimaryKey)
+    val firstName: Rep[FirstName]           = column[FirstName]("first_name")
+    val lastName:  Rep[LastName]            = column[LastName]("last_name")
+    val birthday:  Rep[Date]                = column[Date]("birthday")
+    val age:       Rep[Age]                 = column[Age]("age")
+    val weight:    Rep[Option[Weight]]      = column[Option[Weight]]("weight")
+    val height:    Rep[Option[Height]]      = column[Option[Height]]("height")
+    val image:     Rep[Option[PlayerImage]] = column[Option[PlayerImage]]("image")
+    val countryId: Rep[CountryId]           = column[CountryId]("country_id")
+    val country = foreignKey("FK_players_countries", countryId, countryTable)(
+      _.id,
+      onUpdate = ForeignKeyAction.Restrict,
+      onDelete = ForeignKeyAction.Restrict
+    )
+  }
+
   class RefereeTable(tag: Tag) extends Table[Referee](tag, None, "referees") {
     override def * = (id, firstName, lastName, image, countryId) <> (Referee.tupled, Referee.unapply)
     val id:        Rep[RefereeId]            = column[RefereeId]("id", O.AutoInc, O.PrimaryKey)
-    val firstName: Rep[RefereeFirstName]     = column[RefereeFirstName]("first_name", O.Unique)
-    val lastName:  Rep[RefereeLastName]      = column[RefereeLastName]("last_name", O.Unique)
-    val image:     Rep[Option[RefereeImage]] = column[Option[RefereeImage]]("image", O.Unique)
+    val firstName: Rep[RefereeFirstName]     = column[RefereeFirstName]("first_name")
+    val lastName:  Rep[RefereeLastName]      = column[RefereeLastName]("last_name")
+    val image:     Rep[Option[RefereeImage]] = column[Option[RefereeImage]]("image")
     val countryId: Rep[CountryId]            = column[CountryId]("country_id")
     val country = foreignKey("FK_referees_countries", countryId, countryTable)(
       _.id,
@@ -59,7 +79,7 @@ object Tables {
   class SeasonTable(tag: Tag) extends Table[Season](tag, None, "seasons") {
     override def * = (id, name, isCurrent, startDate, endDate) <> (Season.tupled, Season.unapply)
     val id:        Rep[SeasonId]   = column[SeasonId]("id", O.AutoInc, O.PrimaryKey)
-    val name:      Rep[SeasonName] = column[SeasonName]("name")
+    val name:      Rep[SeasonName] = column[SeasonName]("name", O.Unique)
     val isCurrent: Rep[Boolean]    = column[Boolean]("is_current")
     val startDate: Rep[Date]       = column[Date]("start_date")
     val endDate:   Rep[Date]       = column[Date]("end_date")
@@ -68,7 +88,7 @@ object Tables {
   class StageTable(tag: Tag) extends Table[Stage](tag, None, "stages") {
     override def * = (id, name) <> (Stage.tupled, Stage.unapply)
     val id:   Rep[StageId]   = column[StageId]("id", O.AutoInc, O.PrimaryKey)
-    val name: Rep[StageName] = column[StageName]("name")
+    val name: Rep[StageName] = column[StageName]("name", O.Unique)
   }
 
   class TeamTable(tag: Tag) extends Table[Team](tag, None, "teams") {
@@ -88,7 +108,7 @@ object Tables {
   class VenueTable(tag: Tag) extends Table[Venue](tag, None, "venues") {
     override def * = (id, name, capacity, city, countryId) <> (Venue.tupled, Venue.unapply)
     val id:        Rep[VenueId]   = column[VenueId]("id", O.AutoInc, O.PrimaryKey)
-    val name:      Rep[VenueName] = column[VenueName]("name")
+    val name:      Rep[VenueName] = column[VenueName]("name", O.Unique)
     val capacity:  Rep[Capacity]  = column[Capacity]("capacity")
     val city:      Rep[VenueCity] = column[VenueCity]("city")
     val countryId: Rep[CountryId] = column[CountryId]("country_id")
@@ -104,6 +124,8 @@ object Tables {
   val formationTable = TableQuery[FormationTable]
 
   val leagueTable = TableQuery[LeagueTable]
+
+  val playerTable = TableQuery[PlayerTable]
 
   val refereeTable = TableQuery[RefereeTable]
 
