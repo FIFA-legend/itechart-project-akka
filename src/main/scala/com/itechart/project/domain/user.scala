@@ -12,7 +12,7 @@ object user {
 
   final case class PasswordHash(value: String)
 
-  type Email = String Refined MatchesRegex[W.`"^[A-Za-z0-9]+@[A-Za-z0-9]+.[A-Za-z0-9]+$"`.T]
+  type Email = String Refined MatchesRegex[W.`"^[A-Za-z0-9_]+@[A-Za-z0-9]+.[A-Za-z0-9]+$"`.T]
 
   sealed trait Role
 

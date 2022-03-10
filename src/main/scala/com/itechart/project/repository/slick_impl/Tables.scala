@@ -8,6 +8,7 @@ import com.itechart.project.domain.referee.{Referee, RefereeFirstName, RefereeId
 import com.itechart.project.domain.season.{Season, SeasonId, SeasonName}
 import com.itechart.project.domain.stage.{Stage, StageId, StageName}
 import com.itechart.project.domain.team.{Team, TeamFullName, TeamId, TeamLogo, TeamShortName}
+import com.itechart.project.domain.user.{Email, Login, PasswordHash, Role, User, UserId}
 import com.itechart.project.domain.venue.{Capacity, Venue, VenueCity, VenueId, VenueName}
 import com.itechart.project.repository.slick_impl.Implicits._
 import slick.lifted.TableQuery
@@ -105,6 +106,15 @@ object Tables {
     )
   }
 
+  class UserTable(tag: Tag) extends Table[User](tag, None, "users") {
+    override def * = (id, login, passwordHash, email, role) <> (User.tupled, User.unapply)
+    val id:           Rep[UserId]       = column[UserId]("id", O.AutoInc, O.PrimaryKey)
+    val login:        Rep[Login]        = column[Login]("login", O.Unique)
+    val passwordHash: Rep[PasswordHash] = column[PasswordHash]("password_hash")
+    val email:        Rep[Email]        = column[Email]("email")
+    val role:         Rep[Role]         = column[Role]("role")
+  }
+
   class VenueTable(tag: Tag) extends Table[Venue](tag, None, "venues") {
     override def * = (id, name, capacity, city, countryId) <> (Venue.tupled, Venue.unapply)
     val id:        Rep[VenueId]   = column[VenueId]("id", O.AutoInc, O.PrimaryKey)
@@ -134,6 +144,8 @@ object Tables {
   val stageTable = TableQuery[StageTable]
 
   val teamTable = TableQuery[TeamTable]
+
+  val userTable = TableQuery[UserTable]
 
   val venueTable = TableQuery[VenueTable]
 }

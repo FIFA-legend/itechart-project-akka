@@ -8,6 +8,7 @@ import com.itechart.project.domain.referee.RefereeId
 import com.itechart.project.domain.season.{SeasonId, SeasonName}
 import com.itechart.project.domain.stage.StageId
 import com.itechart.project.domain.team.{TeamId, TeamShortName}
+import com.itechart.project.domain.user.{Email, Login, PasswordHash, Role, UserId}
 import com.itechart.project.domain.venue.VenueId
 import com.itechart.project.utils.RefinedConversions.convertParameter
 import eu.timepit.refined.W
@@ -120,5 +121,22 @@ object Implicits {
   implicit val heightTypeMapper
     : JdbcType[Int Refined GreaterEqual[100]] with BaseTypedType[Int Refined GreaterEqual[100]] =
     MappedColumnType.base[Int Refined GreaterEqual[100], Int](_.value, convertParameter(_, 100))
+
+  implicit val userIdTypeMapper: JdbcType[UserId] with BaseTypedType[UserId] =
+    MappedColumnType.base[UserId, Long](_.value, UserId)
+  implicit val loginTypeMapper: JdbcType[Login] with BaseTypedType[Login] =
+    MappedColumnType.base[Login, String](_.value, Login)
+  implicit val passwordHashTypeMapper: JdbcType[PasswordHash] with BaseTypedType[PasswordHash] =
+    MappedColumnType.base[PasswordHash, String](_.value, PasswordHash)
+  implicit val emailTypeMapper: JdbcType[Email] with BaseTypedType[Email] =
+    MappedColumnType.base[Email, String](_.value, convertParameter(_, "default_email@gmail.com"))
+  implicit val roleTypeMapper: JdbcType[Role] with BaseTypedType[Role] =
+    MappedColumnType.base[Role, String](
+      _.toString,
+      {
+        case "Admin" => Role.Admin
+        case "User"  => Role.User
+      }
+    )
 
 }
