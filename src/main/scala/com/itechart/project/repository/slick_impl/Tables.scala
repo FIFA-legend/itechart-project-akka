@@ -4,6 +4,18 @@ import com.itechart.project.domain.country.{Continent, Country, CountryCode, Cou
 import com.itechart.project.domain.formation.{Formation, FormationId, FormationName}
 import com.itechart.project.domain.league.{League, LeagueId, LeagueName}
 import com.itechart.project.domain.player.{Age, FirstName, Height, LastName, Player, PlayerId, PlayerImage, Weight}
+import com.itechart.project.domain.player_stats.{
+  Assists,
+  Dribbling,
+  Goals,
+  Minute,
+  Passes,
+  PlayerStats,
+  PlayerStatsId,
+  Position,
+  ShirtNumber,
+  Tackles
+}
 import com.itechart.project.domain.referee.{Referee, RefereeFirstName, RefereeId, RefereeImage, RefereeLastName}
 import com.itechart.project.domain.season.{Season, SeasonId, SeasonName}
 import com.itechart.project.domain.stage.{Stage, StageId, StageName}
@@ -61,6 +73,38 @@ object Tables {
       onUpdate = ForeignKeyAction.Restrict,
       onDelete = ForeignKeyAction.Restrict
     )
+  }
+
+  class PlayerStatsTable(tag: Tag) extends Table[PlayerStats](tag, None, "player_stats") {
+    override def * =
+      (
+        id,
+        shirtNumber,
+        position,
+        startMinute,
+        playedMinutes,
+        goals,
+        assists,
+        successfulTackles,
+        totalTackles,
+        successfulPasses,
+        totalPasses,
+        successfulDribbling,
+        totalDribbling
+      ) <> (PlayerStats.tupled, PlayerStats.unapply)
+    val id:                  Rep[PlayerStatsId] = column[PlayerStatsId]("id", O.AutoInc, O.PrimaryKey)
+    val shirtNumber:         Rep[ShirtNumber]   = column[ShirtNumber]("t-shirt_number")
+    val position:            Rep[Position]      = column[Position]("position")
+    val startMinute:         Rep[Minute]        = column[Minute]("start_minute")
+    val playedMinutes:       Rep[Minute]        = column[Minute]("played_minutes")
+    val goals:               Rep[Goals]         = column[Goals]("goals")
+    val assists:             Rep[Assists]       = column[Assists]("assists")
+    val successfulTackles:   Rep[Tackles]       = column[Tackles]("successful_tackles")
+    val totalTackles:        Rep[Tackles]       = column[Tackles]("total_tackles")
+    val successfulPasses:    Rep[Passes]        = column[Passes]("successful_passes")
+    val totalPasses:         Rep[Passes]        = column[Passes]("total_passes")
+    val successfulDribbling: Rep[Dribbling]     = column[Dribbling]("successful_dribblings")
+    val totalDribbling:      Rep[Dribbling]     = column[Dribbling]("total_dribblings")
   }
 
   class RefereeTable(tag: Tag) extends Table[Referee](tag, None, "referees") {
@@ -136,6 +180,8 @@ object Tables {
   val leagueTable = TableQuery[LeagueTable]
 
   val playerTable = TableQuery[PlayerTable]
+
+  val playerStatsTable = TableQuery[PlayerStatsTable]
 
   val refereeTable = TableQuery[RefereeTable]
 

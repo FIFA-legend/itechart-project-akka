@@ -4,6 +4,7 @@ import com.itechart.project.domain.country.{Continent, CountryCode, CountryId, C
 import com.itechart.project.domain.formation.{FormationId, FormationName}
 import com.itechart.project.domain.league.LeagueId
 import com.itechart.project.domain.player.PlayerId
+import com.itechart.project.domain.player_stats.{Minute, PlayerStatsId, Position, ShirtNumber}
 import com.itechart.project.domain.referee.RefereeId
 import com.itechart.project.domain.season.{SeasonId, SeasonName}
 import com.itechart.project.domain.stage.StageId
@@ -138,5 +139,35 @@ object Implicits {
         case "User"  => Role.User
       }
     )
+
+  implicit val playerStatsIdTypeMapper: JdbcType[PlayerStatsId] with BaseTypedType[PlayerStatsId] =
+    MappedColumnType.base[PlayerStatsId, Long](_.value, PlayerStatsId)
+  implicit val shirtNumberTypeMapper: JdbcType[ShirtNumber] with BaseTypedType[ShirtNumber] =
+    MappedColumnType.base[ShirtNumber, Long](_.value, convertParameter(_, 1))
+  implicit val positionNumberTypeMapper: JdbcType[Position] with BaseTypedType[Position] =
+    MappedColumnType.base[Position, String](
+      _.toString,
+      {
+        case "GK"  => Position.GK
+        case "LWB" => Position.LWB
+        case "LB"  => Position.LB
+        case "CB"  => Position.CB
+        case "RB"  => Position.RB
+        case "RWB" => Position.RWB
+        case "LM"  => Position.LM
+        case "CM"  => Position.CM
+        case "CDM" => Position.CDM
+        case "CAM" => Position.CAM
+        case "RM"  => Position.RM
+        case "LW"  => Position.LW
+        case "LF"  => Position.LF
+        case "ST"  => Position.ST
+        case "CF"  => Position.CF
+        case "RF"  => Position.RF
+        case "RW"  => Position.RW
+      }
+    )
+  implicit val minuteTypeMapper: JdbcType[Minute] with BaseTypedType[Minute] =
+    MappedColumnType.base[Minute, Long](_.value, convertParameter(_, 1))
 
 }
