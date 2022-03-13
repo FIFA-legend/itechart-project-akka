@@ -1,14 +1,16 @@
 package com.itechart.project.domain
 
-import akka.http.scaladsl.model.DateTime
 import com.itechart.project.domain.formation.FormationId
 import com.itechart.project.domain.league.LeagueId
+import com.itechart.project.domain.match_stats.MatchStatsId
 import com.itechart.project.domain.referee.RefereeId
 import com.itechart.project.domain.season.SeasonId
-import com.itechart.project.domain.match_stats.MatchStatsId
+import com.itechart.project.domain.stage.StageId
 import com.itechart.project.domain.team.TeamId
 import com.itechart.project.domain.venue.VenueId
 import eu.timepit.refined.types.string.NonEmptyString
+
+import java.sql.{Date, Time}
 
 object football_match {
 
@@ -18,16 +20,17 @@ object football_match {
 
   final case class Match(
     id:                  MatchId,
-    leagueId:            LeagueId,
     seasonId:            SeasonId,
-    statusCode:          Int,
+    leagueId:            LeagueId,
+    stageId:             StageId,
     status:              Status,
-    matchStart:          DateTime,
+    startDate:           Date,
+    startTime:           Time,
     homeTeamId:          TeamId,
     awayTeamId:          TeamId,
     venueId:             VenueId,
     refereeId:           RefereeId,
-    statsId:             MatchStatsId,
+    matchStatsId:        MatchStatsId,
     homeTeamFormationId: FormationId,
     awayTeamFormationId: FormationId
   )

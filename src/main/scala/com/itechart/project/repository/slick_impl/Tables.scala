@@ -1,6 +1,7 @@
 package com.itechart.project.repository.slick_impl
 
 import com.itechart.project.domain.country.{Continent, Country, CountryCode, CountryId, CountryName}
+import com.itechart.project.domain.football_match.{Match, MatchId, Status}
 import com.itechart.project.domain.formation.{Formation, FormationId, FormationName}
 import com.itechart.project.domain.league.{League, LeagueId, LeagueName}
 import com.itechart.project.domain.league_stats.{LeagueGoals, LeagueMatches, LeagueStats, Place}
@@ -29,7 +30,7 @@ import com.itechart.project.repository.slick_impl.Implicits._
 import slick.lifted.TableQuery
 import slick.jdbc.MySQLProfile.api._
 
-import java.sql.Date
+import java.sql.{Date, Time}
 
 object Tables {
 
@@ -95,6 +96,90 @@ object Tables {
       onDelete = ForeignKeyAction.Restrict
     )
     def team = foreignKey("FK_league_stats_teams", teamId, teamTable)(
+      _.id,
+      onUpdate = ForeignKeyAction.Restrict,
+      onDelete = ForeignKeyAction.Restrict
+    )
+  }
+
+  class MatchTable(tag: Tag) extends Table[Match](tag, None, "matches") {
+    override def * = (
+      id,
+      seasonId,
+      leagueId,
+      stageId,
+      status,
+      startDate,
+      startTime,
+      homeTeamId,
+      awayTeamId,
+      venueId,
+      refereeId,
+      matchStatsId,
+      homeTeamFormationId,
+      awayTeamFormationId
+    ) <> (Match.tupled, Match.unapply)
+    val id:                  Rep[MatchId]      = column[MatchId]("id", O.AutoInc, O.PrimaryKey)
+    val seasonId:            Rep[SeasonId]     = column[SeasonId]("season_id")
+    val leagueId:            Rep[LeagueId]     = column[LeagueId]("league_id")
+    val stageId:             Rep[StageId]      = column[StageId]("stage_id")
+    val status:              Rep[Status]       = column[Status]("status")
+    val startDate:           Rep[Date]         = column[Date]("start_date")
+    val startTime:           Rep[Time]         = column[Time]("start_time")
+    val homeTeamId:          Rep[TeamId]       = column[TeamId]("home_team_id")
+    val awayTeamId:          Rep[TeamId]       = column[TeamId]("away_team_id")
+    val venueId:             Rep[VenueId]      = column[VenueId]("venue_id")
+    val refereeId:           Rep[RefereeId]    = column[RefereeId]("referee_id")
+    val matchStatsId:        Rep[MatchStatsId] = column[MatchStatsId]("match_stats_id")
+    val homeTeamFormationId: Rep[FormationId]  = column[FormationId]("home_team_formation_id")
+    val awayTeamFormationId: Rep[FormationId]  = column[FormationId]("away_team_formation_id")
+
+    def season = foreignKey("FK_matches_seasons", seasonId, seasonTable)(
+      _.id,
+      onUpdate = ForeignKeyAction.Restrict,
+      onDelete = ForeignKeyAction.Restrict
+    )
+    def league = foreignKey("FK_matches_leagues", leagueId, leagueTable)(
+      _.id,
+      onUpdate = ForeignKeyAction.Restrict,
+      onDelete = ForeignKeyAction.Restrict
+    )
+    def stage = foreignKey("FK_matches_stages", stageId, stageTable)(
+      _.id,
+      onUpdate = ForeignKeyAction.Restrict,
+      onDelete = ForeignKeyAction.Restrict
+    )
+    def homeTeam = foreignKey("FK_matches_teams", homeTeamId, teamTable)(
+      _.id,
+      onUpdate = ForeignKeyAction.Restrict,
+      onDelete = ForeignKeyAction.Restrict
+    )
+    def awayTeam = foreignKey("FK_matches_teams_02", awayTeamId, teamTable)(
+      _.id,
+      onUpdate = ForeignKeyAction.Restrict,
+      onDelete = ForeignKeyAction.Restrict
+    )
+    def venue = foreignKey("FK_matches_venues", venueId, venueTable)(
+      _.id,
+      onUpdate = ForeignKeyAction.Restrict,
+      onDelete = ForeignKeyAction.Restrict
+    )
+    def referee = foreignKey("FK_matches_referees", refereeId, refereeTable)(
+      _.id,
+      onUpdate = ForeignKeyAction.Restrict,
+      onDelete = ForeignKeyAction.Restrict
+    )
+    def matchStats = foreignKey("FK_matches_match_stats", matchStatsId, matchStatsTable)(
+      _.id,
+      onUpdate = ForeignKeyAction.Restrict,
+      onDelete = ForeignKeyAction.Restrict
+    )
+    def homeTeamFormation = foreignKey("FK_matches_formations", homeTeamFormationId, formationTable)(
+      _.id,
+      onUpdate = ForeignKeyAction.Restrict,
+      onDelete = ForeignKeyAction.Restrict
+    )
+    def awayTeamFormation = foreignKey("FK_matches_formations_02", awayTeamFormationId, formationTable)(
       _.id,
       onUpdate = ForeignKeyAction.Restrict,
       onDelete = ForeignKeyAction.Restrict
@@ -288,6 +373,8 @@ object Tables {
   val leagueTable = TableQuery[LeagueTable]
 
   val leagueStatsTable = TableQuery[LeagueStatsTable]
+
+  val matchTable = TableQuery[MatchTable]
 
   val matchStatsTable = TableQuery[MatchStatsTable]
 
