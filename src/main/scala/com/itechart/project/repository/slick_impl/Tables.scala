@@ -3,6 +3,7 @@ package com.itechart.project.repository.slick_impl
 import com.itechart.project.domain.country.{Continent, Country, CountryCode, CountryId, CountryName}
 import com.itechart.project.domain.formation.{Formation, FormationId, FormationName}
 import com.itechart.project.domain.league.{League, LeagueId, LeagueName}
+import com.itechart.project.domain.match_stats.{Attendance, MatchScore, MatchStats, MatchStatsId}
 import com.itechart.project.domain.player.{Age, FirstName, Height, LastName, Player, PlayerId, PlayerImage, Weight}
 import com.itechart.project.domain.player_stats.{
   Assists,
@@ -50,11 +51,36 @@ object Tables {
     val id:        Rep[LeagueId]   = column[LeagueId]("id", O.AutoInc, O.PrimaryKey)
     val name:      Rep[LeagueName] = column[LeagueName]("name", O.Unique)
     val countryId: Rep[CountryId]  = column[CountryId]("country_id")
-    val country = foreignKey("FK_leagues_countries", countryId, countryTable)(
+    def country = foreignKey("FK_leagues_countries", countryId, countryTable)(
       _.id,
       onUpdate = ForeignKeyAction.Restrict,
       onDelete = ForeignKeyAction.Restrict
     )
+  }
+
+  class MatchStatsTable(tag: Tag) extends Table[MatchStats](tag, None, "match_stats") {
+    override def * = (
+      id,
+      htHomeTeamScore,
+      htAwayTeamScore,
+      ftHomeTeamScore,
+      ftAwayTeamScore,
+      etHomeTeamScore,
+      etAwayTeamScore,
+      pHomeTeamScore,
+      pAwayTeamScore,
+      attendance
+    ) <> (MatchStats.tupled, MatchStats.unapply)
+    val id:              Rep[MatchStatsId]       = column[MatchStatsId]("id", O.AutoInc, O.PrimaryKey)
+    val htHomeTeamScore: Rep[Option[MatchScore]] = column[Option[MatchScore]]("half_time_home_team_score")
+    val htAwayTeamScore: Rep[Option[MatchScore]] = column[Option[MatchScore]]("half_time_away_team_score")
+    val ftHomeTeamScore: Rep[Option[MatchScore]] = column[Option[MatchScore]]("full_time_home_team_score")
+    val ftAwayTeamScore: Rep[Option[MatchScore]] = column[Option[MatchScore]]("full_time_away_team_score")
+    val etHomeTeamScore: Rep[Option[MatchScore]] = column[Option[MatchScore]]("extra_time_home_team_score")
+    val etAwayTeamScore: Rep[Option[MatchScore]] = column[Option[MatchScore]]("extra_time_away_team_score")
+    val pHomeTeamScore:  Rep[Option[MatchScore]] = column[Option[MatchScore]]("penalty_home_team_score")
+    val pAwayTeamScore:  Rep[Option[MatchScore]] = column[Option[MatchScore]]("penalty_away_team_score")
+    val attendance:      Rep[Option[Attendance]] = column[Option[Attendance]]("attendance")
   }
 
   class PlayerTable(tag: Tag) extends Table[Player](tag, None, "players") {
@@ -69,7 +95,7 @@ object Tables {
     val height:    Rep[Option[Height]]      = column[Option[Height]]("height")
     val image:     Rep[Option[PlayerImage]] = column[Option[PlayerImage]]("image")
     val countryId: Rep[CountryId]           = column[CountryId]("country_id")
-    val country = foreignKey("FK_players_countries", countryId, countryTable)(
+    def country = foreignKey("FK_players_countries", countryId, countryTable)(
       _.id,
       onUpdate = ForeignKeyAction.Restrict,
       onDelete = ForeignKeyAction.Restrict
@@ -115,7 +141,7 @@ object Tables {
     val lastName:  Rep[RefereeLastName]      = column[RefereeLastName]("last_name")
     val image:     Rep[Option[RefereeImage]] = column[Option[RefereeImage]]("image")
     val countryId: Rep[CountryId]            = column[CountryId]("country_id")
-    val country = foreignKey("FK_referees_countries", countryId, countryTable)(
+    def country = foreignKey("FK_referees_countries", countryId, countryTable)(
       _.id,
       onUpdate = ForeignKeyAction.Restrict,
       onDelete = ForeignKeyAction.Restrict
@@ -217,6 +243,8 @@ object Tables {
   val formationTable = TableQuery[FormationTable]
 
   val leagueTable = TableQuery[LeagueTable]
+
+  val matchStatsTable = TableQuery[MatchStatsTable]
 
   val playerTable = TableQuery[PlayerTable]
 

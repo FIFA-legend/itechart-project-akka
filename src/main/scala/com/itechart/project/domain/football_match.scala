@@ -5,7 +5,7 @@ import com.itechart.project.domain.formation.FormationId
 import com.itechart.project.domain.league.LeagueId
 import com.itechart.project.domain.referee.RefereeId
 import com.itechart.project.domain.season.SeasonId
-import com.itechart.project.domain.stats.StatsId
+import com.itechart.project.domain.match_stats.MatchStatsId
 import com.itechart.project.domain.team.TeamId
 import com.itechart.project.domain.venue.VenueId
 import eu.timepit.refined.types.string.NonEmptyString
@@ -27,7 +27,7 @@ object football_match {
     awayTeamId:          TeamId,
     venueId:             VenueId,
     refereeId:           RefereeId,
-    statsId:             StatsId,
+    statsId:             MatchStatsId,
     homeTeamFormationId: FormationId,
     awayTeamFormationId: FormationId
   )

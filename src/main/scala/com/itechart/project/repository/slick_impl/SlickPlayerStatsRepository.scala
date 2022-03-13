@@ -23,42 +23,40 @@ class SlickPlayerStatsRepository(db: MySQLProfile.backend.Database)(implicit ec:
   }
 
   override def update(playerStats: PlayerStats): Future[Int] = {
-    def getValuesTuple(playerStats: PlayerStats) = {
-      (
-        playerStats.shirtNumber,
-        playerStats.position,
-        playerStats.startMinute,
-        playerStats.playedMinutes,
-        playerStats.goals,
-        playerStats.assists,
-        playerStats.successfulTackles,
-        playerStats.totalTackles,
-        playerStats.successfulPasses,
-        playerStats.totalPasses,
-        playerStats.successfulDribbling,
-        playerStats.totalDribbling
-      )
-    }
-
     val updatePlayerStatsQuery = playerStatsTable
       .filter(_.id === playerStats.id)
-      .map(stats =>
+      .map(table =>
         (
-          stats.shirtNumber,
-          stats.position,
-          stats.startMinute,
-          stats.playedMinutes,
-          stats.goals,
-          stats.assists,
-          stats.successfulTackles,
-          stats.totalTackles,
-          stats.successfulPasses,
-          stats.totalPasses,
-          stats.successfulDribbling,
-          stats.totalDribbling
+          table.shirtNumber,
+          table.position,
+          table.startMinute,
+          table.playedMinutes,
+          table.goals,
+          table.assists,
+          table.successfulTackles,
+          table.totalTackles,
+          table.successfulPasses,
+          table.totalPasses,
+          table.successfulDribbling,
+          table.totalDribbling
         )
       )
-      .update(getValuesTuple(playerStats))
+      .update(
+        (
+          playerStats.shirtNumber,
+          playerStats.position,
+          playerStats.startMinute,
+          playerStats.playedMinutes,
+          playerStats.goals,
+          playerStats.assists,
+          playerStats.successfulTackles,
+          playerStats.totalTackles,
+          playerStats.successfulPasses,
+          playerStats.totalPasses,
+          playerStats.successfulDribbling,
+          playerStats.totalDribbling
+        )
+      )
     db.run(updatePlayerStatsQuery)
   }
 
