@@ -19,6 +19,7 @@ import com.itechart.project.domain.player_stats.{
   ShirtNumber,
   Tackles
 }
+import com.itechart.project.domain.players_in_matches.PlayerInMatch
 import com.itechart.project.domain.referee.{Referee, RefereeFirstName, RefereeId, RefereeImage, RefereeLastName}
 import com.itechart.project.domain.season.{Season, SeasonId, SeasonName}
 import com.itechart.project.domain.stage.{Stage, StageId, StageName}
@@ -211,6 +212,32 @@ object Tables {
     val attendance:      Rep[Option[Attendance]] = column[Option[Attendance]]("attendance")
   }
 
+  class PlayerInMatchTable(tag: Tag) extends Table[PlayerInMatch](tag, None, "players_in_matches") {
+    override def * =
+      (matchId, playerId, isHomeTeamPlayer, playerStatsId) <> (PlayerInMatch.tupled, PlayerInMatch.unapply)
+    val matchId:          Rep[MatchId]       = column[MatchId]("match_id")
+    val playerId:         Rep[PlayerId]      = column[PlayerId]("player_id")
+    val isHomeTeamPlayer: Rep[Boolean]       = column[Boolean]("is_home_team_player")
+    val playerStatsId:    Rep[PlayerStatsId] = column[PlayerStatsId]("player_stats_id")
+
+    def pk = primaryKey("PK_players_in_matches", (matchId, playerId))
+    def matches = foreignKey("FK_players_in_matches_matches", matchId, matchTable)(
+      _.id,
+      onUpdate = ForeignKeyAction.Restrict,
+      onDelete = ForeignKeyAction.Restrict
+    )
+    def player = foreignKey("FK_players_in_matches_players", playerId, playerTable)(
+      _.id,
+      onUpdate = ForeignKeyAction.Restrict,
+      onDelete = ForeignKeyAction.Restrict
+    )
+    def playerStats = foreignKey("FK_players_in_matches_player_stats", playerStatsId, playerStatsTable)(
+      _.id,
+      onUpdate = ForeignKeyAction.Restrict,
+      onDelete = ForeignKeyAction.Restrict
+    )
+  }
+
   class PlayerTable(tag: Tag) extends Table[Player](tag, None, "players") {
     override def * =
       (id, firstName, lastName, birthday, age, weight, height, image, countryId) <> (Player.tupled, Player.unapply)
@@ -377,6 +404,8 @@ object Tables {
   val matchTable = TableQuery[MatchTable]
 
   val matchStatsTable = TableQuery[MatchStatsTable]
+
+  val playerInMatchTable = TableQuery[PlayerInMatchTable]
 
   val playerTable = TableQuery[PlayerTable]
 
