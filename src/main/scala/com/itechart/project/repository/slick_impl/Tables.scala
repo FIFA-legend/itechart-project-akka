@@ -21,6 +21,7 @@ import com.itechart.project.domain.season.{Season, SeasonId, SeasonName}
 import com.itechart.project.domain.stage.{Stage, StageId, StageName}
 import com.itechart.project.domain.team.{Team, TeamFullName, TeamId, TeamLogo, TeamShortName}
 import com.itechart.project.domain.user.{Email, Login, PasswordHash, Role, User, UserId}
+import com.itechart.project.domain.user_subscriptions.{UserSubscriptionOnPlayer, UserSubscriptionOnTeam}
 import com.itechart.project.domain.venue.{Capacity, Venue, VenueCity, VenueId, VenueName}
 import com.itechart.project.repository.slick_impl.Implicits._
 import slick.lifted.TableQuery
@@ -159,6 +160,44 @@ object Tables {
     val role:         Rep[Role]         = column[Role]("role")
   }
 
+  class UserSubscriptionsOnPlayerTable(tag: Tag)
+    extends Table[UserSubscriptionOnPlayer](tag, None, "user_subscriptions_on_players") {
+    override def * = (userId, playerId) <> (UserSubscriptionOnPlayer.tupled, UserSubscriptionOnPlayer.unapply)
+    val userId:   Rep[UserId]   = column[UserId]("user_id")
+    val playerId: Rep[PlayerId] = column[PlayerId]("player_id")
+
+    def pk = primaryKey("PK_user_subscriptions_on_players", (userId, playerId))
+    def user = foreignKey("FK_user_subscriptions_on_players_users", userId, userTable)(
+      _.id,
+      onUpdate = ForeignKeyAction.Restrict,
+      onDelete = ForeignKeyAction.Restrict
+    )
+    def player = foreignKey("FK_user_subscriptions_on_players_players", playerId, playerTable)(
+      _.id,
+      onUpdate = ForeignKeyAction.Restrict,
+      onDelete = ForeignKeyAction.Restrict
+    )
+  }
+
+  class UserSubscriptionsOnTeamTable(tag: Tag)
+    extends Table[UserSubscriptionOnTeam](tag, None, "user_subscriptions_on_teams") {
+    override def * = (userId, teamId) <> (UserSubscriptionOnTeam.tupled, UserSubscriptionOnTeam.unapply)
+    val userId: Rep[UserId] = column[UserId]("user_id")
+    val teamId: Rep[TeamId] = column[TeamId]("team_id")
+
+    def pk = primaryKey("PK_user_subscriptions_on_teams", (userId, teamId))
+    def user = foreignKey("FK_user_subscriptions_on_teams_users", userId, userTable)(
+      _.id,
+      onUpdate = ForeignKeyAction.Restrict,
+      onDelete = ForeignKeyAction.Restrict
+    )
+    def team = foreignKey("FK_user_subscriptions_on_teams_teams", teamId, teamTable)(
+      _.id,
+      onUpdate = ForeignKeyAction.Restrict,
+      onDelete = ForeignKeyAction.Restrict
+    )
+  }
+
   class VenueTable(tag: Tag) extends Table[Venue](tag, None, "venues") {
     override def * = (id, name, capacity, city, countryId) <> (Venue.tupled, Venue.unapply)
     val id:        Rep[VenueId]   = column[VenueId]("id", O.AutoInc, O.PrimaryKey)
@@ -192,6 +231,10 @@ object Tables {
   val teamTable = TableQuery[TeamTable]
 
   val userTable = TableQuery[UserTable]
+
+  val userPlayersTable = TableQuery[UserSubscriptionsOnPlayerTable]
+
+  val userTeamsTable = TableQuery[UserSubscriptionsOnTeamTable]
 
   val venueTable = TableQuery[VenueTable]
 }

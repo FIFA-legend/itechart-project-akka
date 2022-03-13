@@ -143,7 +143,7 @@ object Implicits {
   implicit val playerStatsIdTypeMapper: JdbcType[PlayerStatsId] with BaseTypedType[PlayerStatsId] =
     MappedColumnType.base[PlayerStatsId, Long](_.value, PlayerStatsId)
   implicit val shirtNumberTypeMapper: JdbcType[ShirtNumber] with BaseTypedType[ShirtNumber] =
-    MappedColumnType.base[ShirtNumber, Long](_.value, convertParameter(_, 1))
+    MappedColumnType.base[ShirtNumber, Int](_.value, convertParameter(_, 1))
   implicit val positionNumberTypeMapper: JdbcType[Position] with BaseTypedType[Position] =
     MappedColumnType.base[Position, String](
       _.toString,
@@ -168,6 +168,6 @@ object Implicits {
       }
     )
   implicit val minuteTypeMapper: JdbcType[Minute] with BaseTypedType[Minute] =
-    MappedColumnType.base[Minute, Long](_.value, convertParameter(_, 1))
+    MappedColumnType.base[Minute, Int](_.value, convertParameter(_, 1))
 
 }
