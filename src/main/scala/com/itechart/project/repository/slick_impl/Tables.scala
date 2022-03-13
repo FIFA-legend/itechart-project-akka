@@ -3,6 +3,7 @@ package com.itechart.project.repository.slick_impl
 import com.itechart.project.domain.country.{Continent, Country, CountryCode, CountryId, CountryName}
 import com.itechart.project.domain.formation.{Formation, FormationId, FormationName}
 import com.itechart.project.domain.league.{League, LeagueId, LeagueName}
+import com.itechart.project.domain.league_stats.{LeagueGoals, LeagueMatches, LeagueStats, Place}
 import com.itechart.project.domain.match_stats.{Attendance, MatchScore, MatchStats, MatchStatsId}
 import com.itechart.project.domain.player.{Age, FirstName, Height, LastName, Player, PlayerId, PlayerImage, Weight}
 import com.itechart.project.domain.player_stats.{
@@ -52,6 +53,48 @@ object Tables {
     val name:      Rep[LeagueName] = column[LeagueName]("name", O.Unique)
     val countryId: Rep[CountryId]  = column[CountryId]("country_id")
     def country = foreignKey("FK_leagues_countries", countryId, countryTable)(
+      _.id,
+      onUpdate = ForeignKeyAction.Restrict,
+      onDelete = ForeignKeyAction.Restrict
+    )
+  }
+
+  class LeagueStatsTable(tag: Tag) extends Table[LeagueStats](tag, None, "league_stats") {
+    override def * = (
+      seasonId,
+      leagueId,
+      teamId,
+      place,
+      points,
+      scoredGoals,
+      concededGoals,
+      victories,
+      defeats,
+      draws
+    ) <> (LeagueStats.tupled, LeagueStats.unapply)
+    val seasonId:      Rep[SeasonId]      = column[SeasonId]("season_id")
+    val leagueId:      Rep[LeagueId]      = column[LeagueId]("league_id")
+    val teamId:        Rep[TeamId]        = column[TeamId]("team_id")
+    val place:         Rep[Place]         = column[Place]("place")
+    val points:        Rep[Int]           = column[Int]("points")
+    val scoredGoals:   Rep[LeagueGoals]   = column[LeagueGoals]("scored_goals")
+    val concededGoals: Rep[LeagueGoals]   = column[LeagueGoals]("conceded_goals")
+    val victories:     Rep[LeagueMatches] = column[LeagueMatches]("victories")
+    val defeats:       Rep[LeagueMatches] = column[LeagueMatches]("defeats")
+    val draws:         Rep[LeagueMatches] = column[LeagueMatches]("draws")
+
+    def pk = primaryKey("PK_league_stats", (seasonId, leagueId, teamId))
+    def season = foreignKey("FK_league_stats_seasons", seasonId, seasonTable)(
+      _.id,
+      onUpdate = ForeignKeyAction.Restrict,
+      onDelete = ForeignKeyAction.Restrict
+    )
+    def league = foreignKey("FK_league_stats_leagues", leagueId, leagueTable)(
+      _.id,
+      onUpdate = ForeignKeyAction.Restrict,
+      onDelete = ForeignKeyAction.Restrict
+    )
+    def team = foreignKey("FK_league_stats_teams", teamId, teamTable)(
       _.id,
       onUpdate = ForeignKeyAction.Restrict,
       onDelete = ForeignKeyAction.Restrict
@@ -243,6 +286,8 @@ object Tables {
   val formationTable = TableQuery[FormationTable]
 
   val leagueTable = TableQuery[LeagueTable]
+
+  val leagueStatsTable = TableQuery[LeagueStatsTable]
 
   val matchStatsTable = TableQuery[MatchStatsTable]
 
