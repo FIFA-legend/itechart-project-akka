@@ -35,8 +35,8 @@ libraryDependencies ++= Seq(
   // akka essentials
   "com.typesafe.akka" %% "akka-actor" % akkaVersion,
   // akka persistence
-  "com.typesafe.akka"   %% "akka-persistence"      % akkaVersion,
-  "com.github.dnvriend" %% "akka-persistence-jdbc" % akkaPersistenceVersion,
+  /*"com.typesafe.akka"   %% "akka-persistence"      % akkaVersion,
+  "com.github.dnvriend" %% "akka-persistence-jdbc" % akkaPersistenceVersion,*/
   // akka streams
   "com.typesafe.akka" %% "akka-stream" % akkaVersion,
   // akka http
