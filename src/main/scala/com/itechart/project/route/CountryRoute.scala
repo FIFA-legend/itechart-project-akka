@@ -29,9 +29,9 @@ class CountryRoute(actor: ActorRef, implicit val timeout: Timeout, implicit val 
             case None =>
               HttpResponse(status = StatusCodes.NotFound)
             case Some(country: CountryApiDto) =>
-              HttpResponse(status = StatusCodes.OK, entity = country.toJson.prettyPrint)
-            case fail: CountryOperationFail =>
-              HttpResponse(status = StatusCodes.InternalServerError, entity = fail.message)
+              Utils.responseOkWithBody(country)
+            case CountryOperationFail =>
+              HttpResponse(status = StatusCodes.InternalServerError, entity = CountryOperationFail.message)
           }
           complete(responseFuture)
         } ~
@@ -40,11 +40,11 @@ class CountryRoute(actor: ActorRef, implicit val timeout: Timeout, implicit val 
               case None =>
                 HttpResponse(status = StatusCodes.NotFound)
               case Some(country: CountryApiDto) =>
-                HttpResponse(status = StatusCodes.OK, entity = country.toJson.prettyPrint)
+                Utils.responseOkWithBody(country)
               case error: InvalidCountryName =>
-                HttpResponse(status = StatusCodes.BadRequest, entity = error.message)
-              case fail: CountryOperationFail =>
-                HttpResponse(status = StatusCodes.InternalServerError, entity = fail.message)
+                Utils.responseBadRequestWithBody(error.message)
+              case CountryOperationFail =>
+                HttpResponse(status = StatusCodes.InternalServerError, entity = CountryOperationFail.message)
             }
             complete(responseFuture)
           } ~
@@ -53,23 +53,20 @@ class CountryRoute(actor: ActorRef, implicit val timeout: Timeout, implicit val 
               case None =>
                 HttpResponse(status = StatusCodes.NotFound)
               case Some(country: CountryApiDto) =>
-                HttpResponse(status = StatusCodes.OK, entity = country.toJson.prettyPrint)
+                Utils.responseOkWithBody(country)
               case error: InvalidCountryCode =>
-                HttpResponse(status = StatusCodes.BadRequest, entity = error.message)
-              case fail: CountryOperationFail =>
-                HttpResponse(status = StatusCodes.InternalServerError, entity = fail.message)
+                Utils.responseBadRequestWithBody(error.message)
+              case CountryOperationFail =>
+                HttpResponse(status = StatusCodes.InternalServerError, entity = CountryOperationFail.message)
             }
             complete(responseFuture)
           } ~
           pathEndOrSingleSlash {
             val responseFuture = (actor ? GetAllCountries).map {
               case ::(head: CountryApiDto, tail) =>
-                HttpResponse(
-                  status = StatusCodes.OK,
-                  entity = (head +: tail.asInstanceOf[List[CountryApiDto]]).toJson.prettyPrint
-                )
-              case fail: CountryOperationFail =>
-                HttpResponse(status = StatusCodes.InternalServerError, entity = fail.message)
+                Utils.responseOkWithBody(head +: tail.asInstanceOf[List[CountryApiDto]])
+              case CountryOperationFail =>
+                HttpResponse(status = StatusCodes.InternalServerError, entity = CountryOperationFail.message)
             }
             complete(responseFuture)
           }
@@ -80,12 +77,10 @@ class CountryRoute(actor: ActorRef, implicit val timeout: Timeout, implicit val 
               case country: CountryApiDto =>
                 HttpResponse(status = StatusCodes.Created, entity = country.toJson.prettyPrint)
               case ::(head: CountryError, tail) =>
-                HttpResponse(
-                  status = StatusCodes.BadRequest,
-                  entity = (head +: tail.asInstanceOf[List[CountryError]]).map(_.message).toJson.prettyPrint
-                )
-              case fail: CountryOperationFail =>
-                HttpResponse(status = StatusCodes.InternalServerError, entity = fail.message)
+                val errorMessages = (head +: tail.asInstanceOf[List[CountryError]]).map(_.message)
+                Utils.responseBadRequestWithBody(errorMessages)
+              case CountryOperationFail =>
+                HttpResponse(status = StatusCodes.InternalServerError, entity = CountryOperationFail.message)
             }
             complete(responseFuture)
           }
@@ -96,14 +91,12 @@ class CountryRoute(actor: ActorRef, implicit val timeout: Timeout, implicit val 
               case 0 =>
                 HttpResponse(status = StatusCodes.NotFound)
               case _: Int =>
-                HttpResponse(status = StatusCodes.OK)
+                Utils.responseOk()
               case ::(head: CountryError, tail) =>
-                HttpResponse(
-                  status = StatusCodes.BadRequest,
-                  entity = (head +: tail.asInstanceOf[List[CountryError]]).map(_.message).toJson.prettyPrint
-                )
-              case fail: CountryOperationFail =>
-                HttpResponse(status = StatusCodes.InternalServerError, entity = fail.message)
+                val errorMessages = (head +: tail.asInstanceOf[List[CountryError]]).map(_.message)
+                Utils.responseBadRequestWithBody(errorMessages)
+              case CountryOperationFail =>
+                HttpResponse(status = StatusCodes.InternalServerError, entity = CountryOperationFail.message)
             }
             complete(responseFuture)
           }
@@ -111,12 +104,14 @@ class CountryRoute(actor: ActorRef, implicit val timeout: Timeout, implicit val 
         delete {
           path(IntNumber) { id =>
             val responseFuture = (actor ? RemoveCountry(id)).map {
+              case error @ CountryNotDeleted(_) =>
+                Utils.responseBadRequestWithBody(error.message)
               case 0 =>
-                HttpResponse(StatusCodes.BadRequest)
+                Utils.responseBadRequest()
               case _: Int =>
-                HttpResponse(StatusCodes.OK)
-              case fail: CountryOperationFail =>
-                HttpResponse(status = StatusCodes.InternalServerError, entity = fail.message)
+                Utils.responseOk()
+              case CountryOperationFail =>
+                HttpResponse(status = StatusCodes.InternalServerError, entity = CountryOperationFail.message)
             }
             complete(responseFuture)
           }

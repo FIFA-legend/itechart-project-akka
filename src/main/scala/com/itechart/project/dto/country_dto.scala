@@ -2,7 +2,7 @@ package com.itechart.project.dto
 
 object country_dto {
 
-  case class CountryApiDto(
+  final case class CountryApiDto(
     id:           Int,
     name:         String,
     country_code: String,

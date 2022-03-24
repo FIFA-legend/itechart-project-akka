@@ -30,7 +30,7 @@ class CountryService(countryRepository: CountryRepository, implicit val ec: Exec
           senderToReturn ! countries.map(domainCountryToDtoCountry)
         case Failure(ex) =>
           log.error(s"An error occurred while extracting all countries out of database: $ex")
-          senderToReturn ! CountryOperationFail()
+          senderToReturn ! CountryOperationFail
       }
 
     case GetCountryById(id) =>
@@ -43,7 +43,7 @@ class CountryService(countryRepository: CountryRepository, implicit val ec: Exec
           senderToReturn ! maybeCountry.map(domainCountryToDtoCountry)
         case Failure(ex) =>
           log.error(s"An error occurred while extracting a country with id = $id: $ex")
-          senderToReturn ! CountryOperationFail()
+          senderToReturn ! CountryOperationFail
       }
 
     case GetCountryByName(name) =>
@@ -61,7 +61,7 @@ class CountryService(countryRepository: CountryRepository, implicit val ec: Exec
               senderToReturn ! maybeCountry.map(domainCountryToDtoCountry)
             case Failure(ex) =>
               log.error(s"An error occurred while extracting a country with name = $name: $ex")
-              senderToReturn ! CountryOperationFail()
+              senderToReturn ! CountryOperationFail
           }
       }
 
@@ -138,6 +138,9 @@ class CountryService(countryRepository: CountryRepository, implicit val ec: Exec
         case Success(result) =>
           log.info(s"Country with id = $id ${if (result == 0) "not " else ""}removed")
           senderToReturn ! result
+        case Failure(_: SQLIntegrityConstraintViolationException) =>
+          log.info(s"A country with id = $id can't be deleted because it's a part of foreign key")
+          senderToReturn ! CountryNotDeleted(id)
         case Failure(ex) =>
           log.error(s"An error occurred while deleting a country with id = $id: $ex")
           senderToReturn ! CountryOperationFail

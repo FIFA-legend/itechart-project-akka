@@ -1,6 +1,6 @@
 package com.itechart.project.repository.slick_impl
 
-import com.itechart.project.domain.country.Country
+import com.itechart.project.domain.country.{Country, CountryId}
 import com.itechart.project.domain.league.{League, LeagueId, LeagueName}
 import com.itechart.project.repository.LeagueRepository
 import com.itechart.project.repository.slick_impl.Implicits._
@@ -27,8 +27,8 @@ class SlickLeagueRepository(db: MySQLProfile.backend.Database)(implicit ec: Exec
     db.run[Seq[League]](leagueByNameQuery.result).map(_.headOption)
   }
 
-  override def findByCountry(country: Country): Future[List[League]] = {
-    val leaguesByCountryQuery = leagueTable.filter(_.countryId === country.id)
+  override def findByCountry(countryId: CountryId): Future[List[League]] = {
+    val leaguesByCountryQuery = leagueTable.filter(_.countryId === countryId)
     db.run[Seq[League]](leaguesByCountryQuery.result).map(_.toList)
   }
 
