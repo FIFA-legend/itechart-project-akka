@@ -1,6 +1,8 @@
 package com.itechart.project.service
 
 import akka.actor.{Actor, ActorLogging, Props}
+import akka.pattern.ask
+import akka.util.Timeout
 import com.itechart.project.domain.country.{Continent, Country, CountryId}
 import com.itechart.project.dto.country_dto.CountryApiDto
 import com.itechart.project.repository.CountryRepository
@@ -11,11 +13,14 @@ import eu.timepit.refined.W
 import eu.timepit.refined.string.MatchesRegex
 
 import java.sql.SQLIntegrityConstraintViolationException
-import scala.concurrent.ExecutionContext
+import scala.concurrent.{ExecutionContext, Future}
 import scala.util.{Failure, Success}
 
-class CountryService(countryRepository: CountryRepository, implicit val ec: ExecutionContext)
-  extends Actor
+class CountryService(
+  countryRepository:    CountryRepository,
+  implicit val ec:      ExecutionContext,
+  implicit val timeout: Timeout
+) extends Actor
     with ActorLogging {
   import CountryService._
 
@@ -107,6 +112,23 @@ class CountryService(countryRepository: CountryRepository, implicit val ec: Exec
           }
       }
 
+    case AddCountries(countryDtoList) =>
+      val senderToReturn = sender()
+      log.info(s"Trying to add countries $countryDtoList")
+      val addedCountries = Future.traverse(countryDtoList.map(self ? AddCountry(_)))(identity)
+      addedCountries.onComplete {
+        case Success(list) =>
+          log.info(s"Countries $countryDtoList successfully added")
+          val result: List[Either[CountryError, CountryApiDto]] = list.flatMap {
+            case country: CountryApiDto => List(Right(country))
+            case ::(head: CountryError, tail) => (head +: tail.asInstanceOf[List[CountryError]]).map(Left(_))
+          }
+          senderToReturn ! result
+        case Failure(ex) =>
+          log.error(s"An error occurred while creating countries $countryDtoList: $ex")
+          senderToReturn ! CountryOperationFail
+      }
+
     case UpdateCountry(countryDto: CountryApiDto) =>
       val senderToReturn   = sender()
       val validatedCountry = validateCountryDto(countryDto)
@@ -189,8 +211,8 @@ class CountryService(countryRepository: CountryRepository, implicit val ec: Exec
 }
 
 object CountryService {
-  def apply(countryRepository: CountryRepository)(implicit ec: ExecutionContext): Props = Props(
-    new CountryService(countryRepository, ec)
+  def apply(countryRepository: CountryRepository)(implicit ec: ExecutionContext, timeout: Timeout): Props = Props(
+    new CountryService(countryRepository, ec, timeout)
   )
 
   case object GetAllCountries

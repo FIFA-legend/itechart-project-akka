@@ -72,18 +72,41 @@ class CountryRoute(actor: ActorRef, implicit val timeout: Timeout, implicit val 
           }
       } ~
         post {
-          entity(as[CountryApiDto]) { countryDto =>
-            val responseFuture = (actor ? AddCountry(countryDto)).map {
-              case country: CountryApiDto =>
-                HttpResponse(status = StatusCodes.Created, entity = country.toJson.prettyPrint)
-              case ::(head: CountryError, tail) =>
-                val errorMessages = (head +: tail.asInstanceOf[List[CountryError]]).map(_.message)
-                Utils.responseBadRequestWithBody(errorMessages)
-              case CountryOperationFail =>
-                HttpResponse(status = StatusCodes.InternalServerError, entity = CountryOperationFail.message)
+          path("all") {
+            entity(as[List[CountryApiDto]]) { countryDtoList =>
+              val responseFuture = (actor ? AddCountries(countryDtoList)).map {
+                case ::(Left(head: CountryError), tail) =>
+                  val result = (Left(head) +: tail.asInstanceOf[List[Either[CountryError, CountryApiDto]]]).map {
+                    case Right(country) => country.toJson.prettyPrint
+                    case Left(error)    => error.message
+                  }
+                  Utils.responseOkWithBody(result)
+                case ::(Right(head: CountryApiDto), tail) =>
+                  val result = (Right(head) +: tail.asInstanceOf[List[Either[CountryError, CountryApiDto]]]).map {
+                    case Right(country) => country.toJson.prettyPrint
+                    case Left(error)    => error.message
+                  }
+                  Utils.responseOkWithBody(result)
+                case CountryOperationFail =>
+                  HttpResponse(status = StatusCodes.InternalServerError, entity = CountryOperationFail.message)
+              }
+              complete(responseFuture)
             }
-            complete(responseFuture)
-          }
+          } ~
+            pathEndOrSingleSlash {
+              entity(as[CountryApiDto]) { countryDto =>
+                val responseFuture = (actor ? AddCountry(countryDto)).map {
+                  case country: CountryApiDto =>
+                    HttpResponse(status = StatusCodes.Created, entity = country.toJson.prettyPrint)
+                  case ::(head: CountryError, tail) =>
+                    val errorMessages = (head +: tail.asInstanceOf[List[CountryError]]).map(_.message)
+                    Utils.responseBadRequestWithBody(errorMessages)
+                  case CountryOperationFail =>
+                    HttpResponse(status = StatusCodes.InternalServerError, entity = CountryOperationFail.message)
+                }
+                complete(responseFuture)
+              }
+            }
         } ~
         put {
           entity(as[CountryApiDto]) { countryDto =>
