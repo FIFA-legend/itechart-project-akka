@@ -1,6 +1,8 @@
 package com.itechart.project.service
 
 import akka.actor.{Actor, ActorLogging, Props}
+import akka.pattern.ask
+import akka.util.Timeout
 import com.itechart.project.domain.country.CountryId
 import com.itechart.project.domain.league.{League, LeagueId}
 import com.itechart.project.dto.league_dto.LeagueApiDto
@@ -11,11 +13,14 @@ import com.itechart.project.utils.RefinedConversions.validateParameter
 import eu.timepit.refined.predicates.all.NonEmpty
 
 import java.sql.SQLIntegrityConstraintViolationException
-import scala.concurrent.ExecutionContext
+import scala.concurrent.{ExecutionContext, Future}
 import scala.util.{Failure, Success}
 
-class LeagueService(leagueRepository: LeagueRepository, implicit val ec: ExecutionContext)
-  extends Actor
+class LeagueService(
+  leagueRepository:     LeagueRepository,
+  implicit val ec:      ExecutionContext,
+  implicit val timeout: Timeout
+) extends Actor
     with ActorLogging {
   import LeagueService._
 
@@ -101,6 +106,23 @@ class LeagueService(leagueRepository: LeagueRepository, implicit val ec: Executi
           }
       }
 
+    case AddLeagues(leagueDtoList) =>
+      val senderToReturn = sender()
+      log.info(s"Trying to add leagues $leagueDtoList")
+      val addedLeagues = Future.traverse(leagueDtoList.map(self ? AddLeague(_)))(identity)
+      addedLeagues.onComplete {
+        case Success(list) =>
+          log.info(s"Leagues $leagueDtoList successfully added")
+          val result: List[Either[LeagueError, LeagueApiDto]] = list.flatMap {
+            case league: LeagueApiDto => List(Right(league))
+            case ::(head: LeagueError, tail) => (head +: tail.asInstanceOf[List[LeagueError]]).map(Left(_))
+          }
+          senderToReturn ! result
+        case Failure(ex) =>
+          log.error(s"An error occurred while creating leagues $leagueDtoList: $ex")
+          senderToReturn ! LeagueOperationFail
+      }
+
     case UpdateLeague(leagueDto) =>
       val senderToReturn  = sender()
       val validatedLeague = validateLeagueDto(leagueDto)
@@ -154,8 +176,8 @@ class LeagueService(leagueRepository: LeagueRepository, implicit val ec: Executi
 }
 
 object LeagueService {
-  def apply(leagueRepository: LeagueRepository)(implicit ec: ExecutionContext): Props = Props(
-    new LeagueService(leagueRepository, ec)
+  def apply(leagueRepository: LeagueRepository)(implicit ec: ExecutionContext, timeout: Timeout): Props = Props(
+    new LeagueService(leagueRepository, ec, timeout)
   )
 
   case object GetAllLeagues

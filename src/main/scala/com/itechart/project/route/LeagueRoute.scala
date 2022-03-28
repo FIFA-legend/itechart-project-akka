@@ -74,20 +74,43 @@ class LeagueRoute(actor: ActorRef, implicit val timeout: Timeout, implicit val e
           }
       } ~
         post {
-          entity(as[LeagueApiDto]) { leagueDto =>
-            val responseFuture = (actor ? AddLeague(leagueDto)).map {
-              case league: LeagueApiDto =>
-                HttpResponse(status = StatusCodes.Created, entity = league.toJson.prettyPrint)
-              case List(error: LeagueError) =>
-                Utils.responseBadRequestWithBody(error.message)
-              case ::(head: LeagueError, tail) =>
-                val messages = (head +: tail.asInstanceOf[List[LeagueError]]).map(_.message)
-                Utils.responseBadRequestWithBody(messages)
-              case LeagueOperationFail =>
-                HttpResponse(status = StatusCodes.InternalServerError, entity = LeagueOperationFail.message)
+          path("all") {
+            entity(as[List[LeagueApiDto]]) { leagueDtoList =>
+              val responseFuture = (actor ? AddLeagues(leagueDtoList)).map {
+                case ::(Left(head: LeagueError), tail) =>
+                  val result = (Left(head) +: tail.asInstanceOf[List[Either[LeagueError, LeagueApiDto]]]).map {
+                    case Right(country) => country.toJson.prettyPrint
+                    case Left(error)    => error.message
+                  }
+                  Utils.responseOkWithBody(result)
+                case ::(Right(head: LeagueApiDto), tail) =>
+                  val result = (Right(head) +: tail.asInstanceOf[List[Either[LeagueError, LeagueApiDto]]]).map {
+                    case Right(country) => country.toJson.prettyPrint
+                    case Left(error)    => error.message
+                  }
+                  Utils.responseOkWithBody(result)
+                case LeagueOperationFail =>
+                  HttpResponse(status = StatusCodes.InternalServerError, entity = LeagueOperationFail.message)
+              }
+              complete(responseFuture)
             }
-            complete(responseFuture)
-          }
+          } ~
+            pathEndOrSingleSlash {
+              entity(as[LeagueApiDto]) { leagueDto =>
+                val responseFuture = (actor ? AddLeague(leagueDto)).map {
+                  case league: LeagueApiDto =>
+                    HttpResponse(status = StatusCodes.Created, entity = league.toJson.prettyPrint)
+                  case List(error: LeagueError) =>
+                    Utils.responseBadRequestWithBody(error.message)
+                  case ::(head: LeagueError, tail) =>
+                    val messages = (head +: tail.asInstanceOf[List[LeagueError]]).map(_.message)
+                    Utils.responseBadRequestWithBody(messages)
+                  case LeagueOperationFail =>
+                    HttpResponse(status = StatusCodes.InternalServerError, entity = LeagueOperationFail.message)
+                }
+                complete(responseFuture)
+              }
+            }
         } ~
         put {
           entity(as[LeagueApiDto]) { leagueDto =>
