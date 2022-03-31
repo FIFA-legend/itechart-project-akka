@@ -151,7 +151,7 @@ class CountryService(
       validatedCountry match {
         case Left(errors) =>
           log.info(s"Validation of country = $countryDto failed because of: ${errors.mkString("[", ", ", "]")}")
-          senderToReturn ! errors
+          senderToReturn ! CountryValidationErrors(errors)
         case Right(country) =>
           val rowsUpdatedOrErrors = for {
             errors      <- validateCountryDuplicatesOnUpdate(country)

@@ -6,7 +6,7 @@ import akka.util.Timeout
 import com.itechart.project.domain.country.CountryId
 import com.itechart.project.domain.league.{League, LeagueId}
 import com.itechart.project.dto.league.LeagueApiDto
-import com.itechart.project.repository.LeagueRepository
+import com.itechart.project.repository.{CountryRepository, LeagueRepository}
 import com.itechart.project.service.domain_errors.LeagueErrors.LeagueError
 import com.itechart.project.service.domain_errors.LeagueErrors.LeagueError._
 import com.itechart.project.utils.RefinedConversions.validateParameter
@@ -18,6 +18,7 @@ import scala.util.{Failure, Success}
 
 class LeagueService(
   leagueRepository:     LeagueRepository,
+  countryRepository:    CountryRepository,
   implicit val ec:      ExecutionContext,
   implicit val timeout: Timeout
 ) extends Actor
@@ -32,10 +33,10 @@ class LeagueService(
       leaguesFuture.onComplete {
         case Success(leagues) =>
           log.info(s"Got ${leagues.size} leagues out of database")
-          senderToReturn ! leagues.map(domainLeagueToDtoLeague)
+          senderToReturn ! FoundLeagues(leagues.map(domainLeagueToDtoLeague))
         case Failure(ex) =>
           log.error(s"An error occurred while extracting all leagues out of database: $ex")
-          senderToReturn ! LeagueOperationFail
+          senderToReturn ! LeagueInternalServerError
       }
 
     case GetLeagueById(id) =>
@@ -45,10 +46,10 @@ class LeagueService(
       leagueFuture.onComplete {
         case Success(maybeLeague) =>
           log.info(s"League with id = $id ${if (maybeLeague.isEmpty) "not "}found")
-          senderToReturn ! maybeLeague.map(domainLeagueToDtoLeague)
+          senderToReturn ! FoundLeague(maybeLeague.map(domainLeagueToDtoLeague))
         case Failure(ex) =>
           log.error(s"An error occurred while extracting a league with id = $id: $ex")
-          senderToReturn ! LeagueOperationFail
+          senderToReturn ! LeagueInternalServerError
       }
 
     case GetLeagueByName(name) =>
@@ -57,89 +58,108 @@ class LeagueService(
       val validatedNameEither = validateParameter[LeagueError, String, NonEmpty](name, InvalidLeagueName(name))
       validatedNameEither match {
         case Left(error) =>
-          log.info(s"League with name = $name not found because of $error")
-          senderToReturn ! error
+          log.info(s"Validation of name = $name failed")
+          senderToReturn ! LeagueValidationErrors(List(error))
         case Right(validName) =>
-          log.info(s"Getting league with name = $name out of database")
+          log.info(s"Extracting league with name = $name out of database")
           val leagueFuture = leagueRepository.findByName(validName)
           leagueFuture.onComplete {
             case Success(maybeLeague) =>
               log.info(s"League with name = $name ${if (maybeLeague.isEmpty) "not " else ""}found")
-              senderToReturn ! maybeLeague.map(domainLeagueToDtoLeague)
+              senderToReturn ! FoundLeague(maybeLeague.map(domainLeagueToDtoLeague))
             case Failure(ex) =>
               log.error(s"An error occurred while extracting a league with name = $name: $ex")
-              senderToReturn ! LeagueOperationFail
+              senderToReturn ! LeagueInternalServerError
           }
       }
 
     case GetLeaguesByCountry(countryId) =>
       val senderToReturn = sender()
-      log.info(s"Getting league with countryId = $countryId")
+      log.info(s"Getting leagues with countryId = $countryId")
       val leagueFuture = leagueRepository.findByCountry(CountryId(countryId))
       leagueFuture.onComplete {
         case Success(leagues) =>
           log.info(s"Got ${leagues.size} leagues with countryId = $countryId out of database")
-          senderToReturn ! leagues.map(domainLeagueToDtoLeague)
+          senderToReturn ! FoundLeagues(leagues.map(domainLeagueToDtoLeague))
         case Failure(ex) =>
           log.error(s"An error occurred while extracting leagues with countryId = $countryId: $ex")
-          senderToReturn ! LeagueOperationFail
+          senderToReturn ! LeagueInternalServerError
       }
 
     case AddLeague(leagueDto) =>
       val senderToReturn = sender()
-      log.info(s"Trying to create league $leagueDto in database")
+      log.info(s"Adding a league = $leagueDto")
       val validatedLeague = validateLeagueDto(leagueDto)
       validatedLeague match {
-        case Left(errors) => senderToReturn ! errors
+        case Left(errors) =>
+          log.info(s"Validation of league = $leagueDto failed because of: ${errors.mkString("[", ", ", "]")}")
+          senderToReturn ! LeagueValidationErrors(errors)
         case Right(league) =>
-          val future = leagueRepository.create(league)
-          future.onComplete {
-            case Success(id) =>
+          val leagueIdOrErrors = for {
+            errors   <- validateLeagueDuplicatesOnCreate(league)
+            leagueId <- if (errors.isEmpty) leagueRepository.create(league) else Future(LeagueId(0))
+            result    = if (leagueId.value == 0) Left(errors) else Right(leagueId)
+          } yield result
+          leagueIdOrErrors.onComplete {
+            case Success(Right(id)) =>
               log.info(s"League $league successfully created")
-              senderToReturn ! leagueDto.copy(id = id.value)
-            case Failure(ex: SQLIntegrityConstraintViolationException) =>
-              log.info(s"League $league doesn't created because of $ex")
-              senderToReturn ! List(DuplicateLeagueName(leagueDto.name), InvalidLeagueCountryId(leagueDto.countryId))
+              senderToReturn ! LeagueAdded(leagueDto.copy(id = id.value))
+            case Success(Left(errors)) =>
+              log.info(s"League $league doesn't created because of: ${errors.mkString("[", ", ", "]")}")
+              senderToReturn ! LeagueValidationErrors(errors)
             case Failure(ex) =>
               log.error(s"An error occurred while creating a league $league: $ex")
-              senderToReturn ! LeagueOperationFail
+              senderToReturn ! LeagueInternalServerError
           }
       }
 
     case AddLeagues(leagueDtoList) =>
       val senderToReturn = sender()
-      log.info(s"Trying to add leagues $leagueDtoList")
+      log.info(s"Adding leagues $leagueDtoList")
       val addedLeagues = Future.traverse(leagueDtoList.map(self ? AddLeague(_)))(identity)
       addedLeagues.onComplete {
         case Success(list) =>
-          log.info(s"Leagues $leagueDtoList successfully added")
-          val result: List[Either[LeagueError, LeagueApiDto]] = list.flatMap {
-            case league: LeagueApiDto => List(Right(league))
-            case ::(head: LeagueError, tail) => (head +: tail.asInstanceOf[List[LeagueError]]).map(Left(_))
+          val leagues: List[LeagueApiDto] = list.flatMap {
+            case LeagueAdded(league) => List(league)
+            case _                   => List()
           }
-          senderToReturn ! result
+          val errors: List[LeagueError] = list.flatMap {
+            case LeagueValidationErrors(errors) => errors
+            case _                              => List()
+          }
+          log.info(s"Leagues $leagues added successfully")
+          log.info(s"Other leagues aren't added because of: ${errors.mkString("[", ", ", "]")}")
+          senderToReturn ! LeaguesAdded(leagues, errors)
         case Failure(ex) =>
           log.error(s"An error occurred while creating leagues $leagueDtoList: $ex")
-          senderToReturn ! LeagueOperationFail
+          senderToReturn ! LeagueInternalServerError
       }
 
     case UpdateLeague(leagueDto) =>
-      val senderToReturn  = sender()
+      val senderToReturn = sender()
+      log.info(s"Updating a league = $leagueDto")
       val validatedLeague = validateLeagueDto(leagueDto)
       validatedLeague match {
-        case Left(errors) => senderToReturn ! errors
+        case Left(errors) =>
+          log.info(s"Validation of league = $leagueDto failed because of: ${errors.mkString("[", ", ", "]")}")
+          senderToReturn ! LeagueValidationErrors(errors)
         case Right(league) =>
-          val future = leagueRepository.update(league)
-          future.onComplete {
-            case Success(rowsUpdated) =>
-              log.info(s"League $league update process finished")
-              senderToReturn ! rowsUpdated
-            case Failure(ex: SQLIntegrityConstraintViolationException) =>
-              log.info(s"League $league doesn't updated because of $ex")
-              senderToReturn ! List(DuplicateLeagueName(leagueDto.name), InvalidLeagueCountryId(leagueDto.countryId))
+          val rowsUpdatedOrErrors = for {
+            errors      <- validateLeagueDuplicatesOnUpdate(league)
+            rowsUpdated <- if (errors.isEmpty) leagueRepository.update(league) else Future(-1)
+            result       = if (rowsUpdated == -1) Left(errors) else Right(rowsUpdated)
+          } yield result
+          rowsUpdatedOrErrors.onComplete {
+            case Success(Right(rowsUpdated)) =>
+              log.info(s"League $league is ${if (rowsUpdated == 0) "not " else ""}updated")
+              val result = if (rowsUpdated == 0) LeagueNotUpdated else LeagueUpdated
+              senderToReturn ! result
+            case Success(Left(errors)) =>
+              log.info(s"League $league isn't updated because of: ${errors.mkString("[", ", ", "]")}")
+              senderToReturn ! LeagueValidationErrors(errors)
             case Failure(ex) =>
               log.error(s"An error occurred while updating a league $league: $ex")
-              senderToReturn ! LeagueOperationFail
+              senderToReturn ! LeagueInternalServerError
           }
       }
 
@@ -148,17 +168,41 @@ class LeagueService(
       log.info(s"Deleting league with id = $id")
       val leagueFuture = leagueRepository.delete(LeagueId(id))
       leagueFuture.onComplete {
-        case Success(result) =>
-          log.info(s"League with id = $id ${if (result == 0) "not " else ""}removed")
+        case Success(rowsDeleted) =>
+          log.info(s"League with id = $id ${if (rowsDeleted == 0) "not " else ""}removed")
+          val result = if (rowsDeleted == 0) LeagueNotDeleted else LeagueDeleted
           senderToReturn ! result
         case Failure(_: SQLIntegrityConstraintViolationException) =>
           log.info(s"A league with id = $id can't be deleted because it's a part of foreign key")
-          senderToReturn ! LeagueNotDeleted(id)
+          senderToReturn ! LeagueValidationErrors(List(LeagueForeignKey(id)))
         case Failure(ex) =>
           log.error(s"An error occurred while deleting a league with id = $id: $ex")
-          senderToReturn ! LeagueOperationFail
+          senderToReturn ! LeagueInternalServerError
       }
   }
+
+  private def validateLeagueDuplicatesOnCreate(league: League): Future[List[LeagueError]] = for {
+    maybeLeagueByName <- leagueRepository.findByName(league.name)
+    maybeCountry      <- countryRepository.findById(league.countryId)
+    duplicatedNameError <- Future(
+      if (maybeLeagueByName.isEmpty) List() else List(DuplicateLeagueName(league.name.value))
+    )
+    countryNotFoundError <- Future(
+      if (maybeCountry.isEmpty) List(InvalidLeagueCountryId(league.countryId.value)) else List()
+    )
+  } yield duplicatedNameError ++ countryNotFoundError
+
+  private def validateLeagueDuplicatesOnUpdate(league: League): Future[List[LeagueError]] = for {
+    maybeLeagueByName <- leagueRepository.findByName(league.name)
+    maybeCountry      <- countryRepository.findById(league.countryId)
+    duplicatedNameError <- Future(
+      if (maybeLeagueByName.isEmpty || maybeLeagueByName.head.id == league.id) List()
+      else List(DuplicateLeagueName(league.name.value))
+    )
+    countryNotFoundError <- Future(
+      if (maybeCountry.isEmpty) List(InvalidLeagueCountryId(league.countryId.value)) else List()
+    )
+  } yield duplicatedNameError ++ countryNotFoundError
 
   private def validateLeagueDto(leagueDto: LeagueApiDto): Either[List[LeagueError], League] = {
     val validatedNameEither =
@@ -176,8 +220,14 @@ class LeagueService(
 }
 
 object LeagueService {
-  def apply(leagueRepository: LeagueRepository)(implicit ec: ExecutionContext, timeout: Timeout): Props = Props(
-    new LeagueService(leagueRepository, ec, timeout)
+  def apply(
+    leagueRepository:  LeagueRepository,
+    countryRepository: CountryRepository
+  )(
+    implicit ec: ExecutionContext,
+    timeout:     Timeout
+  ): Props = Props(
+    new LeagueService(leagueRepository, countryRepository, ec, timeout)
   )
 
   case object GetAllLeagues
@@ -188,4 +238,15 @@ object LeagueService {
   case class AddLeagues(leagueDtoList: List[LeagueApiDto])
   case class UpdateLeague(leagueDto: LeagueApiDto)
   case class RemoveLeague(id: Int)
+
+  case class FoundLeagues(leagues: List[LeagueApiDto])
+  case class FoundLeague(maybeLeague: Option[LeagueApiDto])
+  case class LeagueValidationErrors(errors: List[LeagueError])
+  case class LeagueAdded(league: LeagueApiDto)
+  case class LeaguesAdded(leagues: List[LeagueApiDto], errors: List[LeagueError])
+  case object LeagueUpdated
+  case object LeagueNotUpdated
+  case object LeagueDeleted
+  case object LeagueNotDeleted
+  case object LeagueInternalServerError
 }

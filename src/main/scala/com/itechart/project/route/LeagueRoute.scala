@@ -10,11 +10,7 @@ import akka.pattern.ask
 import com.itechart.project.dto.JsonConverters.LeagueJsonProtocol
 import com.itechart.project.dto.league.LeagueApiDto
 import com.itechart.project.service.domain_errors.LeagueErrors.LeagueError
-import com.itechart.project.service.domain_errors.LeagueErrors.LeagueError.{
-  InvalidLeagueName,
-  LeagueNotDeleted,
-  LeagueOperationFail
-}
+import com.itechart.project.service.domain_errors.LeagueErrors.LeagueError._
 import spray.json._
 
 import scala.concurrent.ExecutionContext
@@ -30,45 +26,43 @@ class LeagueRoute(actor: ActorRef, implicit val timeout: Timeout, implicit val e
       get {
         (path(IntNumber) | parameter("id".as[Int])) { id =>
           val responseFuture = (actor ? GetLeagueById(id)).map {
-            case None =>
+            case FoundLeague(None) =>
               HttpResponse(status = StatusCodes.NotFound)
-            case Some(leagueDto: LeagueApiDto) =>
-              Utils.responseBadRequestWithBody(leagueDto)
-            case LeagueOperationFail =>
-              HttpResponse(status = StatusCodes.InternalServerError, entity = LeagueOperationFail.message)
+            case FoundLeague(Some(league)) =>
+              Utils.responseBadRequestWithBody(league)
+            case LeagueInternalServerError =>
+              HttpResponse(status = StatusCodes.InternalServerError)
           }
           complete(responseFuture)
         } ~
           parameter("name") { name =>
             val responseFuture = (actor ? GetLeagueByName(name)).map {
-              case None =>
+              case FoundLeague(None) =>
                 HttpResponse(status = StatusCodes.NotFound)
-              case Some(leagueDto: LeagueApiDto) =>
-                Utils.responseOkWithBody(leagueDto)
-              case error: InvalidLeagueName =>
-                Utils.responseBadRequestWithBody(error.message)
-              case LeagueOperationFail =>
-                HttpResponse(status = StatusCodes.InternalServerError, entity = LeagueOperationFail.message)
+              case FoundLeague(Some(league)) =>
+                Utils.responseOkWithBody(league)
+              case LeagueValidationErrors(errors) =>
+                Utils.responseBadRequestWithBody(errors.map(_.message))
+              case LeagueInternalServerError =>
+                HttpResponse(status = StatusCodes.InternalServerError)
             }
             complete(responseFuture)
           } ~
           parameter("country_id".as[Int]) { countryId =>
             val responseFuture = (actor ? GetLeaguesByCountry(countryId)).map {
-              case Nil =>
-                HttpResponse(status = StatusCodes.NotFound)
-              case ::(head: LeagueApiDto, tail) =>
-                Utils.responseOkWithBody(head +: tail.asInstanceOf[List[LeagueApiDto]])
-              case LeagueOperationFail =>
-                HttpResponse(status = StatusCodes.InternalServerError, entity = LeagueOperationFail.message)
+              case FoundLeagues(leagues) =>
+                Utils.responseOkWithBody(leagues)
+              case LeagueInternalServerError =>
+                HttpResponse(status = StatusCodes.InternalServerError)
             }
             complete(responseFuture)
           } ~
           pathEndOrSingleSlash {
             val responseFuture = (actor ? GetAllLeagues).map {
-              case ::(head: LeagueApiDto, tail) =>
-                Utils.responseOkWithBody(head +: tail.asInstanceOf[List[LeagueApiDto]])
-              case LeagueOperationFail =>
-                HttpResponse(status = StatusCodes.InternalServerError, entity = LeagueOperationFail.message)
+              case FoundLeagues(leagues) =>
+                Utils.responseOkWithBody(leagues)
+              case LeagueInternalServerError =>
+                HttpResponse(status = StatusCodes.InternalServerError)
             }
             complete(responseFuture)
           }
@@ -77,20 +71,14 @@ class LeagueRoute(actor: ActorRef, implicit val timeout: Timeout, implicit val e
           path("all") {
             entity(as[List[LeagueApiDto]]) { leagueDtoList =>
               val responseFuture = (actor ? AddLeagues(leagueDtoList)).map {
-                case ::(Left(head: LeagueError), tail) =>
-                  val result = (Left(head) +: tail.asInstanceOf[List[Either[LeagueError, LeagueApiDto]]]).map {
-                    case Right(country) => country.toJson.prettyPrint
-                    case Left(error)    => error.message
-                  }
-                  Utils.responseOkWithBody(result)
-                case ::(Right(head: LeagueApiDto), tail) =>
-                  val result = (Right(head) +: tail.asInstanceOf[List[Either[LeagueError, LeagueApiDto]]]).map {
-                    case Right(country) => country.toJson.prettyPrint
-                    case Left(error)    => error.message
-                  }
-                  Utils.responseOkWithBody(result)
-                case LeagueOperationFail =>
-                  HttpResponse(status = StatusCodes.InternalServerError, entity = LeagueOperationFail.message)
+                case LeaguesAdded(leagues, errors) =>
+                  val map = Map(
+                    "leagues" -> leagues.toJson.prettyPrint,
+                    "errors"  -> errors.map(_.message).mkString("[", ", ", "]")
+                  )
+                  Utils.responseOkWithBody(map)
+                case LeagueInternalServerError =>
+                  HttpResponse(status = StatusCodes.InternalServerError)
               }
               complete(responseFuture)
             }
@@ -98,15 +86,12 @@ class LeagueRoute(actor: ActorRef, implicit val timeout: Timeout, implicit val e
             pathEndOrSingleSlash {
               entity(as[LeagueApiDto]) { leagueDto =>
                 val responseFuture = (actor ? AddLeague(leagueDto)).map {
-                  case league: LeagueApiDto =>
+                  case LeagueAdded(league) =>
                     HttpResponse(status = StatusCodes.Created, entity = league.toJson.prettyPrint)
-                  case List(error: LeagueError) =>
-                    Utils.responseBadRequestWithBody(error.message)
-                  case ::(head: LeagueError, tail) =>
-                    val messages = (head +: tail.asInstanceOf[List[LeagueError]]).map(_.message)
-                    Utils.responseBadRequestWithBody(messages)
-                  case LeagueOperationFail =>
-                    HttpResponse(status = StatusCodes.InternalServerError, entity = LeagueOperationFail.message)
+                  case LeagueValidationErrors(errors) =>
+                    Utils.responseBadRequestWithBody(errors.map(_.message))
+                  case LeagueInternalServerError =>
+                    HttpResponse(status = StatusCodes.InternalServerError)
                 }
                 complete(responseFuture)
               }
@@ -115,15 +100,14 @@ class LeagueRoute(actor: ActorRef, implicit val timeout: Timeout, implicit val e
         put {
           entity(as[LeagueApiDto]) { leagueDto =>
             val responseFuture = (actor ? UpdateLeague(leagueDto)).map {
-              case 0 =>
+              case LeagueNotUpdated =>
                 HttpResponse(status = StatusCodes.NotFound)
-              case _: Int =>
+              case LeagueUpdated =>
                 Utils.responseOk()
-              case ::(head: LeagueError, tail) =>
-                val messages = (head +: tail.asInstanceOf[List[LeagueError]]).map(_.message)
-                Utils.responseBadRequestWithBody(messages)
-              case LeagueOperationFail =>
-                HttpResponse(status = StatusCodes.InternalServerError, entity = LeagueOperationFail.message)
+              case LeagueValidationErrors(errors) =>
+                Utils.responseBadRequestWithBody(errors.map(_.message))
+              case LeagueInternalServerError =>
+                HttpResponse(status = StatusCodes.InternalServerError)
             }
             complete(responseFuture)
           }
@@ -131,14 +115,14 @@ class LeagueRoute(actor: ActorRef, implicit val timeout: Timeout, implicit val e
         delete {
           path(IntNumber) { id =>
             val responseFuture = (actor ? RemoveLeague(id)).map {
-              case error @ LeagueNotDeleted(_) =>
-                Utils.responseBadRequestWithBody(error.message)
-              case 0 =>
+              case LeagueNotDeleted =>
                 Utils.responseBadRequest()
-              case _: Int =>
+              case LeagueDeleted =>
                 Utils.responseOk()
-              case LeagueOperationFail =>
-                HttpResponse(status = StatusCodes.InternalServerError, entity = LeagueOperationFail.message)
+              case LeagueValidationErrors(errors) =>
+                Utils.responseBadRequestWithBody(errors.map(_.message))
+              case LeagueValidationErrors =>
+                HttpResponse(status = StatusCodes.InternalServerError)
             }
             complete(responseFuture)
           }

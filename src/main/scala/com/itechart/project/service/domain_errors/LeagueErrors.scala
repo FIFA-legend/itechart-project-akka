@@ -21,12 +21,8 @@ object LeagueErrors {
         s"Invalid league country id `$id`. Country with id `$id` doesn't exist"
     }
 
-    final case class LeagueNotDeleted(id: Int) extends LeagueError {
+    final case class LeagueForeignKey(id: Int) extends LeagueError {
       override def message: String = s"League with id `$id` can't be deleted because it's a part of foreign key"
-    }
-
-    final case object LeagueOperationFail extends LeagueError {
-      override def message: String = s"Some internal server exception happened during request"
     }
   }
 
