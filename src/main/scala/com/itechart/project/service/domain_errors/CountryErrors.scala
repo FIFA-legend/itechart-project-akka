@@ -30,12 +30,8 @@ object CountryErrors {
         s"Invalid country continent `$continent`. Country continent must be: Africa, Asia, Europe, Oceania, North America or South America"
     }
 
-    final case class CountryNotDeleted(id: Int) extends CountryError {
+    final case class CountryForeignKey(id: Int) extends CountryError {
       override def message: String = s"Country with id `$id` can't be deleted because it's a part of foreign key"
-    }
-
-    final case object CountryOperationFail extends CountryError {
-      override def message: String = s"Some internal server exception happened during request"
     }
   }
 
