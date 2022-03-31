@@ -1,6 +1,6 @@
 package com.itechart.project.dto
 
-object league_dto {
+object league {
 
   final case class LeagueApiDto(
     league_id:  Int,

@@ -4,7 +4,7 @@ import akka.actor.{Actor, ActorLogging, Props}
 import akka.pattern.ask
 import akka.util.Timeout
 import com.itechart.project.domain.country.{Continent, Country, CountryId}
-import com.itechart.project.dto.country_dto.CountryApiDto
+import com.itechart.project.dto.country.CountryApiDto
 import com.itechart.project.repository.CountryRepository
 import com.itechart.project.service.domain_errors.CountryErrors.CountryError
 import com.itechart.project.service.domain_errors.CountryErrors.CountryError._

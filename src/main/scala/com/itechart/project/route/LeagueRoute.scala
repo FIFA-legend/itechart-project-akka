@@ -8,7 +8,7 @@ import akka.http.scaladsl.server.Route
 import akka.util.Timeout
 import akka.pattern.ask
 import com.itechart.project.dto.JsonConverters.LeagueJsonProtocol
-import com.itechart.project.dto.league_dto.LeagueApiDto
+import com.itechart.project.dto.league.LeagueApiDto
 import com.itechart.project.service.domain_errors.LeagueErrors.LeagueError
 import com.itechart.project.service.domain_errors.LeagueErrors.LeagueError.{
   InvalidLeagueName,

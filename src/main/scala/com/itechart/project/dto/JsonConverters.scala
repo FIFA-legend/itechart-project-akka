@@ -1,7 +1,7 @@
 package com.itechart.project.dto
 
-import com.itechart.project.dto.country_dto.CountryApiDto
-import com.itechart.project.dto.league_dto.LeagueApiDto
+import com.itechart.project.dto.country.CountryApiDto
+import com.itechart.project.dto.league.LeagueApiDto
 import spray.json.{DefaultJsonProtocol, RootJsonFormat}
 
 object JsonConverters {

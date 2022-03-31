@@ -5,7 +5,7 @@ import akka.pattern.ask
 import akka.util.Timeout
 import com.itechart.project.domain.country.CountryId
 import com.itechart.project.domain.league.{League, LeagueId}
-import com.itechart.project.dto.league_dto.LeagueApiDto
+import com.itechart.project.dto.league.LeagueApiDto
 import com.itechart.project.repository.LeagueRepository
 import com.itechart.project.service.domain_errors.LeagueErrors.LeagueError
 import com.itechart.project.service.domain_errors.LeagueErrors.LeagueError._
