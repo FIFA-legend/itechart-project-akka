@@ -222,8 +222,8 @@ class CountryService(
       )
     val validatedCodeEither =
       validateParameter[CountryError, String, MatchesRegex[W.`"^[a-z]{2}$"`.T]](
-        countryDto.country_code,
-        InvalidCountryCode(countryDto.country_code)
+        countryDto.countryCode,
+        InvalidCountryCode(countryDto.countryCode)
       )
     val validatedContinentEither: Either[CountryError, Continent] = countryDto.continent match {
       case "Africa"        => Right(Continent.Africa)
@@ -236,7 +236,7 @@ class CountryService(
     }
 
     val nameErrorList = if (validatedNameEither.isLeft) List(InvalidCountryName(countryDto.name)) else List()
-    val codeErrorList = if (validatedCodeEither.isLeft) List(InvalidCountryCode(countryDto.country_code)) else List()
+    val codeErrorList = if (validatedCodeEither.isLeft) List(InvalidCountryCode(countryDto.countryCode)) else List()
     val continentErrorList =
       if (validatedContinentEither.isLeft) List(InvalidCountryContinent(countryDto.continent)) else List()
     val errorsList: List[CountryError] = nameErrorList ++ codeErrorList ++ continentErrorList

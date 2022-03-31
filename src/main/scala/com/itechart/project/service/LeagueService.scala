@@ -96,10 +96,10 @@ class LeagueService(
           future.onComplete {
             case Success(id) =>
               log.info(s"League $league successfully created")
-              senderToReturn ! leagueDto.copy(league_id = id.value)
+              senderToReturn ! leagueDto.copy(id = id.value)
             case Failure(ex: SQLIntegrityConstraintViolationException) =>
               log.info(s"League $league doesn't created because of $ex")
-              senderToReturn ! List(DuplicateLeagueName(leagueDto.name), InvalidLeagueCountryId(leagueDto.country_id))
+              senderToReturn ! List(DuplicateLeagueName(leagueDto.name), InvalidLeagueCountryId(leagueDto.countryId))
             case Failure(ex) =>
               log.error(s"An error occurred while creating a league $league: $ex")
               senderToReturn ! LeagueOperationFail
@@ -136,7 +136,7 @@ class LeagueService(
               senderToReturn ! rowsUpdated
             case Failure(ex: SQLIntegrityConstraintViolationException) =>
               log.info(s"League $league doesn't updated because of $ex")
-              senderToReturn ! List(DuplicateLeagueName(leagueDto.name), InvalidLeagueCountryId(leagueDto.country_id))
+              senderToReturn ! List(DuplicateLeagueName(leagueDto.name), InvalidLeagueCountryId(leagueDto.countryId))
             case Failure(ex) =>
               log.error(s"An error occurred while updating a league $league: $ex")
               senderToReturn ! LeagueOperationFail
@@ -166,7 +166,7 @@ class LeagueService(
 
     val result = for {
       name <- validatedNameEither
-    } yield League(LeagueId(leagueDto.league_id), name, CountryId(leagueDto.country_id))
+    } yield League(LeagueId(leagueDto.id), name, CountryId(leagueDto.countryId))
 
     result.left.map(List(_))
   }
