@@ -1,6 +1,7 @@
 package com.itechart.project.dto
 
 import com.itechart.project.dto.country.CountryApiDto
+import com.itechart.project.dto.formation.FormationApiDto
 import com.itechart.project.dto.league.LeagueApiDto
 import spray.json.{DefaultJsonProtocol, DeserializationException, JsNumber, JsObject, JsString, JsValue, RootJsonFormat}
 
@@ -39,6 +40,23 @@ object JsonConverters {
         "league_id"  -> JsNumber(league.id),
         "country_id" -> JsNumber(league.countryId),
         "name"       -> JsString(league.name)
+      )
+    }
+  }
+
+  trait FormationJsonProtocol extends DefaultJsonProtocol {
+    implicit object FormationJsonFormat extends RootJsonFormat[FormationApiDto] {
+      override def read(value: JsValue): FormationApiDto = {
+        value.asJsObject.getFields("formation_id", "name") match {
+          case Seq(JsNumber(id), JsString(name)) =>
+            FormationApiDto(id.toInt, name)
+          case _ => throw DeserializationException("Formation expected")
+        }
+      }
+
+      override def write(formation: FormationApiDto): JsValue = JsObject(
+        "formation_id" -> JsNumber(formation.id),
+        "name"         -> JsString(formation.name)
       )
     }
   }
