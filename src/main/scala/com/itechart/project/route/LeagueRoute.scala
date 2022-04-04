@@ -5,17 +5,15 @@ import akka.http.scaladsl.marshallers.sprayjson.SprayJsonSupport
 import akka.http.scaladsl.model.{HttpResponse, StatusCodes}
 import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server.Route
-import akka.util.Timeout
 import akka.pattern.ask
+import akka.util.Timeout
 import com.itechart.project.dto.JsonConverters.LeagueJsonProtocol
 import com.itechart.project.dto.league.LeagueApiDto
-import com.itechart.project.service.domain_errors.LeagueErrors.LeagueError
-import com.itechart.project.service.domain_errors.LeagueErrors.LeagueError._
 import spray.json._
 
 import scala.concurrent.ExecutionContext
 
-class LeagueRoute(actor: ActorRef, implicit val timeout: Timeout, implicit val ec: ExecutionContext)
+class LeagueRoute(leagueService: ActorRef, implicit val timeout: Timeout, implicit val ec: ExecutionContext)
   extends LeagueJsonProtocol
     with SprayJsonSupport {
 
@@ -25,7 +23,7 @@ class LeagueRoute(actor: ActorRef, implicit val timeout: Timeout, implicit val e
     pathPrefix("api" / "leagues") {
       get {
         (path(IntNumber) | parameter("id".as[Int])) { id =>
-          val responseFuture = (actor ? GetLeagueById(id)).map {
+          val responseFuture = (leagueService ? GetLeagueById(id)).map {
             case FoundLeague(None) =>
               HttpResponse(status = StatusCodes.NotFound)
             case FoundLeague(Some(league)) =>
@@ -36,7 +34,7 @@ class LeagueRoute(actor: ActorRef, implicit val timeout: Timeout, implicit val e
           complete(responseFuture)
         } ~
           parameter("name") { name =>
-            val responseFuture = (actor ? GetLeagueByName(name)).map {
+            val responseFuture = (leagueService ? GetLeagueByName(name)).map {
               case FoundLeague(None) =>
                 HttpResponse(status = StatusCodes.NotFound)
               case FoundLeague(Some(league)) =>
@@ -49,7 +47,7 @@ class LeagueRoute(actor: ActorRef, implicit val timeout: Timeout, implicit val e
             complete(responseFuture)
           } ~
           parameter("country_id".as[Int]) { countryId =>
-            val responseFuture = (actor ? GetLeaguesByCountry(countryId)).map {
+            val responseFuture = (leagueService ? GetLeaguesByCountry(countryId)).map {
               case FoundLeagues(leagues) =>
                 Utils.responseOkWithBody(leagues)
               case LeagueInternalServerError =>
@@ -58,7 +56,7 @@ class LeagueRoute(actor: ActorRef, implicit val timeout: Timeout, implicit val e
             complete(responseFuture)
           } ~
           pathEndOrSingleSlash {
-            val responseFuture = (actor ? GetAllLeagues).map {
+            val responseFuture = (leagueService ? GetAllLeagues).map {
               case FoundLeagues(leagues) =>
                 Utils.responseOkWithBody(leagues)
               case LeagueInternalServerError =>
@@ -70,7 +68,7 @@ class LeagueRoute(actor: ActorRef, implicit val timeout: Timeout, implicit val e
         post {
           path("all") {
             entity(as[List[LeagueApiDto]]) { leagueDtoList =>
-              val responseFuture = (actor ? AddLeagues(leagueDtoList)).map {
+              val responseFuture = (leagueService ? AddLeagues(leagueDtoList)).map {
                 case LeaguesAdded(leagues, errors) =>
                   val map = Map(
                     "leagues" -> leagues.toJson.prettyPrint,
@@ -85,7 +83,7 @@ class LeagueRoute(actor: ActorRef, implicit val timeout: Timeout, implicit val e
           } ~
             pathEndOrSingleSlash {
               entity(as[LeagueApiDto]) { leagueDto =>
-                val responseFuture = (actor ? AddLeague(leagueDto)).map {
+                val responseFuture = (leagueService ? AddLeague(leagueDto)).map {
                   case LeagueAdded(league) =>
                     HttpResponse(status = StatusCodes.Created, entity = league.toJson.prettyPrint)
                   case LeagueValidationErrors(errors) =>
@@ -99,7 +97,7 @@ class LeagueRoute(actor: ActorRef, implicit val timeout: Timeout, implicit val e
         } ~
         put {
           entity(as[LeagueApiDto]) { leagueDto =>
-            val responseFuture = (actor ? UpdateLeague(leagueDto)).map {
+            val responseFuture = (leagueService ? UpdateLeague(leagueDto)).map {
               case LeagueNotUpdated =>
                 HttpResponse(status = StatusCodes.NotFound)
               case LeagueUpdated =>
@@ -114,7 +112,7 @@ class LeagueRoute(actor: ActorRef, implicit val timeout: Timeout, implicit val e
         } ~
         delete {
           path(IntNumber) { id =>
-            val responseFuture = (actor ? RemoveLeague(id)).map {
+            val responseFuture = (leagueService ? RemoveLeague(id)).map {
               case LeagueNotDeleted =>
                 Utils.responseBadRequest()
               case LeagueDeleted =>

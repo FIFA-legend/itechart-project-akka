@@ -13,7 +13,7 @@ import spray.json._
 
 import scala.concurrent.ExecutionContext
 
-class CountryRoute(actor: ActorRef, implicit val timeout: Timeout, implicit val ec: ExecutionContext)
+class CountryRoute(countryService: ActorRef, implicit val timeout: Timeout, implicit val ec: ExecutionContext)
   extends CountryJsonProtocol
     with SprayJsonSupport {
 
@@ -23,7 +23,7 @@ class CountryRoute(actor: ActorRef, implicit val timeout: Timeout, implicit val 
     pathPrefix("api" / "countries") {
       get {
         (path(IntNumber) | parameter("id".as[Int])) { id =>
-          val responseFuture = (actor ? GetCountryById(id)).map {
+          val responseFuture = (countryService ? GetCountryById(id)).map {
             case FoundCountry(None) =>
               HttpResponse(status = StatusCodes.NotFound)
             case FoundCountry(Some(country)) =>
@@ -34,7 +34,7 @@ class CountryRoute(actor: ActorRef, implicit val timeout: Timeout, implicit val 
           complete(responseFuture)
         } ~
           parameter("name") { name =>
-            val responseFuture = (actor ? GetCountryByName(name)).map {
+            val responseFuture = (countryService ? GetCountryByName(name)).map {
               case FoundCountry(None) =>
                 HttpResponse(status = StatusCodes.NotFound)
               case FoundCountry(Some(country)) =>
@@ -47,7 +47,7 @@ class CountryRoute(actor: ActorRef, implicit val timeout: Timeout, implicit val 
             complete(responseFuture)
           } ~
           parameter("code") { code =>
-            val responseFuture = (actor ? GetCountryByCode(code)).map {
+            val responseFuture = (countryService ? GetCountryByCode(code)).map {
               case FoundCountry(None) =>
                 HttpResponse(status = StatusCodes.NotFound)
               case FoundCountry(Some(country)) =>
@@ -60,7 +60,7 @@ class CountryRoute(actor: ActorRef, implicit val timeout: Timeout, implicit val 
             complete(responseFuture)
           } ~
           pathEndOrSingleSlash {
-            val responseFuture = (actor ? GetAllCountries).map {
+            val responseFuture = (countryService ? GetAllCountries).map {
               case FoundCountries(countries) =>
                 Utils.responseOkWithBody(countries)
               case CountryInternalServerError =>
@@ -72,7 +72,7 @@ class CountryRoute(actor: ActorRef, implicit val timeout: Timeout, implicit val 
         post {
           path("all") {
             entity(as[List[CountryApiDto]]) { countryDtoList =>
-              val responseFuture = (actor ? AddCountries(countryDtoList)).map {
+              val responseFuture = (countryService ? AddCountries(countryDtoList)).map {
                 case CountriesAdded(countries, errors) =>
                   val map = Map(
                     "countries" -> countries.toJson.prettyPrint,
@@ -87,7 +87,7 @@ class CountryRoute(actor: ActorRef, implicit val timeout: Timeout, implicit val 
           } ~
             pathEndOrSingleSlash {
               entity(as[CountryApiDto]) { countryDto =>
-                val responseFuture = (actor ? AddCountry(countryDto)).map {
+                val responseFuture = (countryService ? AddCountry(countryDto)).map {
                   case CountryAdded(country) =>
                     HttpResponse(status = StatusCodes.Created, entity = country.toJson.prettyPrint)
                   case CountryValidationErrors(errors) =>
@@ -101,7 +101,7 @@ class CountryRoute(actor: ActorRef, implicit val timeout: Timeout, implicit val 
         } ~
         put {
           entity(as[CountryApiDto]) { countryDto =>
-            val responseFuture = (actor ? UpdateCountry(countryDto)).map {
+            val responseFuture = (countryService ? UpdateCountry(countryDto)).map {
               case CountryNotUpdated =>
                 HttpResponse(status = StatusCodes.NotFound)
               case CountryUpdated =>
@@ -116,7 +116,7 @@ class CountryRoute(actor: ActorRef, implicit val timeout: Timeout, implicit val 
         } ~
         delete {
           path(IntNumber) { id =>
-            val responseFuture = (actor ? RemoveCountry(id)).map {
+            val responseFuture = (countryService ? RemoveCountry(id)).map {
               case CountryNotDeleted =>
                 Utils.responseBadRequest()
               case CountryDeleted =>
