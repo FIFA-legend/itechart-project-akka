@@ -1,8 +1,8 @@
 package com.itechart.project.service
 
 import akka.actor.{Actor, ActorLogging, Props}
-import akka.util.Timeout
 import akka.pattern.ask
+import akka.util.Timeout
 import com.itechart.project.domain.season.{Season, SeasonId}
 import com.itechart.project.dto.season.SeasonApiDto
 import com.itechart.project.repository.SeasonRepository
@@ -12,7 +12,8 @@ import com.itechart.project.utils.RefinedConversions.validateParameter
 import eu.timepit.refined.W
 import eu.timepit.refined.string.MatchesRegex
 
-import java.sql.{Date, SQLIntegrityConstraintViolationException}
+import java.sql.SQLIntegrityConstraintViolationException
+import java.time.LocalDate
 import java.time.temporal.ChronoUnit
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.{Failure, Success}
@@ -187,30 +188,29 @@ class SeasonService(seasonRepository: SeasonRepository)(implicit ec: ExecutionCo
         seasonDto.name,
         InvalidSeasonName(seasonDto.name)
       )
-    val currentDate = new Date(System.currentTimeMillis()).toLocalDate
-    val startDate   = seasonDto.startDate.toLocalDate
-    val endDate     = seasonDto.endDate.toLocalDate
+    val start   = seasonDto.startDate
+    val end     = seasonDto.endDate
+    val current = LocalDate.now()
     val validatedStartDateEither =
-      if (startDate.getYear >= 1900 && startDate.isBefore(currentDate.plus(1, ChronoUnit.YEARS)))
-        Right(seasonDto.startDate)
-      else Left(InvalidSeasonStartDate(seasonDto.startDate))
+      if (start.getYear >= 1900 && start.isBefore(current.plus(1, ChronoUnit.YEARS))) Right(start)
+      else Left(InvalidSeasonStartDate(start))
     val validatedEndDateEither =
-      if (endDate.minus(1, ChronoUnit.YEARS).isBefore(startDate)) Right(seasonDto.endDate)
-      else Left(InvalidSeasonEndDate(seasonDto.endDate))
+      if (end.minus(1, ChronoUnit.YEARS).isBefore(start)) Right(end)
+      else Left(InvalidSeasonEndDate(end))
 
     val nameErrorList = if (validatedNameEither.isLeft) List(InvalidSeasonName(seasonDto.name)) else List()
     val startDateErrorList =
-      if (validatedStartDateEither.isLeft) List(InvalidSeasonStartDate(seasonDto.startDate)) else List()
+      if (validatedStartDateEither.isLeft) List(InvalidSeasonStartDate(start)) else List()
     val endDateErrorList =
-      if (validatedEndDateEither.isLeft) List(InvalidSeasonEndDate(seasonDto.endDate)) else List()
+      if (validatedEndDateEither.isLeft) List(InvalidSeasonEndDate(end)) else List()
     val errorsList: List[SeasonError] = nameErrorList ++ startDateErrorList ++ endDateErrorList
 
     val result = for {
-      name     <- validatedNameEither
-      sDate    <- validatedStartDateEither
-      eDate    <- validatedEndDateEither
-      isCurrent = currentDate.isAfter(startDate) && currentDate.isBefore(endDate)
-    } yield Season(SeasonId(seasonDto.id), name, isCurrent, sDate, eDate)
+      name      <- validatedNameEither
+      startDate <- validatedStartDateEither
+      endDate   <- validatedEndDateEither
+      isCurrent  = current.isAfter(start) && current.isBefore(end)
+    } yield Season(SeasonId(seasonDto.id), name, isCurrent, startDate, endDate)
 
     result.left.map(_ => errorsList)
   }

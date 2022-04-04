@@ -7,7 +7,7 @@ import eu.timepit.refined.numeric.GreaterEqual
 import eu.timepit.refined.string.MatchesRegex
 import eu.timepit.refined.types.string.NonEmptyString
 
-import java.sql.Date
+import java.time.LocalDate
 
 object player {
 
@@ -29,7 +29,7 @@ object player {
     id:        PlayerId,
     firstName: FirstName,
     lastName:  LastName,
-    birthday:  Date,
+    birthday:  LocalDate,
     age:       Age,
     weight:    Option[Weight],
     height:    Option[Height],

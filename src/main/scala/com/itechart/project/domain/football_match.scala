@@ -10,7 +10,7 @@ import com.itechart.project.domain.team.TeamId
 import com.itechart.project.domain.venue.VenueId
 import eu.timepit.refined.types.string.NonEmptyString
 
-import java.sql.{Date, Time}
+import java.time.{LocalDate, LocalTime}
 
 object football_match {
 
@@ -24,8 +24,8 @@ object football_match {
     leagueId:            LeagueId,
     stageId:             StageId,
     status:              Status,
-    startDate:           Date,
-    startTime:           Time,
+    startDate:           LocalDate,
+    startTime:           LocalTime,
     homeTeamId:          TeamId,
     awayTeamId:          TeamId,
     venueId:             VenueId,

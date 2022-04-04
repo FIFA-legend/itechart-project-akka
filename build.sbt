@@ -29,7 +29,7 @@ val circeConfigVersion     = "0.8.0"
 val scalaTestVersion       = "3.2.9"
 val mySqlVersion           = "8.0.28"
 val jwtVersion             = "5.0.0"
-val flywayVersion          = "8.5.1"
+val flywayVersion          = "8.5.4"
 val refinedVersion         = "0.9.28"
 val slickVersion           = "3.3.3"
 

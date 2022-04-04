@@ -4,18 +4,9 @@ import com.itechart.project.dto.country.CountryApiDto
 import com.itechart.project.dto.formation.FormationApiDto
 import com.itechart.project.dto.league.LeagueApiDto
 import com.itechart.project.dto.season.SeasonApiDto
-import spray.json.{
-  DefaultJsonProtocol,
-  DeserializationException,
-  JsBoolean,
-  JsNumber,
-  JsObject,
-  JsString,
-  JsValue,
-  RootJsonFormat
-}
+import spray.json._
 
-import java.sql.Date
+import java.time.LocalDate
 
 object JsonConverters {
 
@@ -78,7 +69,7 @@ object JsonConverters {
       override def read(value: JsValue): SeasonApiDto = {
         value.asJsObject.getFields("season_id", "name", "is_current", "start_date", "end_date") match {
           case Seq(JsNumber(id), JsString(name), JsBoolean(isCurrent), JsString(startDate), JsString(endDate)) =>
-            SeasonApiDto(id.toInt, name, isCurrent, Date.valueOf(startDate), Date.valueOf(endDate))
+            SeasonApiDto(id.toInt, name, isCurrent, LocalDate.parse(startDate), LocalDate.parse(endDate))
           case _ => throw DeserializationException("Season expected")
         }
       }

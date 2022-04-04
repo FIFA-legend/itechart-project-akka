@@ -1,6 +1,6 @@
 package com.itechart.project.dto
 
-import java.sql.Date
+import java.time.LocalDate
 
 object season {
 
@@ -8,8 +8,8 @@ object season {
     id:        Int,
     name:      String,
     isCurrent: Boolean,
-    startDate: Date,
-    endDate:   Date
+    startDate: LocalDate,
+    endDate:   LocalDate
   )
 
 }

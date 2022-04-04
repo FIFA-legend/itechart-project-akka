@@ -28,7 +28,7 @@ object StartApp extends App {
     case Left(ex) => throw ex
     case Right(databaseConfiguration) =>
       val migrator = DatabaseSettings.migrator(databaseConfiguration)
-      // migrator.migrate()
+      migrator.migrate()
 
       val db = DatabaseSettings.connection(databaseConfiguration)
 

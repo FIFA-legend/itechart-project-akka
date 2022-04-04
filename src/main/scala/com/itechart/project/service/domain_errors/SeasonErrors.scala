@@ -1,6 +1,6 @@
 package com.itechart.project.service.domain_errors
 
-import java.sql.Date
+import java.time.LocalDate
 
 object SeasonErrors {
 
@@ -18,12 +18,12 @@ object SeasonErrors {
       override def message: String = s"Duplicate season name `$name`. Season name must be unique"
     }
 
-    final case class InvalidSeasonStartDate(date: Date) extends SeasonError {
+    final case class InvalidSeasonStartDate(date: LocalDate) extends SeasonError {
       override def message: String =
-        s"Invalid season start date `${date.toString}`. Year must be greater than 1900 and less than ${new Date(System.currentTimeMillis()).toLocalDate.getYear + 1}"
+        s"Invalid season start date `${date.toString}`. Year must be greater than 1900 and less than ${LocalDate.now().getYear + 1}"
     }
 
-    final case class InvalidSeasonEndDate(date: Date) extends SeasonError {
+    final case class InvalidSeasonEndDate(date: LocalDate) extends SeasonError {
       override def message: String =
         s"Invalid season end date `${date.toString}`. Year value must be greater than start date on 1 year"
     }

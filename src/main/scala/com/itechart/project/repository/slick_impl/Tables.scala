@@ -1,37 +1,26 @@
 package com.itechart.project.repository.slick_impl
 
-import com.itechart.project.domain.country.{Continent, Country, CountryCode, CountryId, CountryName}
-import com.itechart.project.domain.football_match.{Match, MatchId, Status}
-import com.itechart.project.domain.formation.{Formation, FormationId, FormationName}
-import com.itechart.project.domain.league.{League, LeagueId, LeagueName}
-import com.itechart.project.domain.league_stats.{LeagueGoals, LeagueMatches, LeagueStats, Place}
-import com.itechart.project.domain.match_stats.{Attendance, MatchScore, MatchStats, MatchStatsId}
-import com.itechart.project.domain.player.{Age, FirstName, Height, LastName, Player, PlayerId, PlayerImage, Weight}
-import com.itechart.project.domain.player_stats.{
-  Assists,
-  Dribbling,
-  Goals,
-  Minute,
-  Passes,
-  PlayerStats,
-  PlayerStatsId,
-  Position,
-  ShirtNumber,
-  Tackles
-}
+import com.itechart.project.domain.country._
+import com.itechart.project.domain.football_match._
+import com.itechart.project.domain.formation._
+import com.itechart.project.domain.league._
+import com.itechart.project.domain.league_stats._
+import com.itechart.project.domain.match_stats._
+import com.itechart.project.domain.player._
+import com.itechart.project.domain.player_stats._
 import com.itechart.project.domain.players_in_matches.PlayerInMatch
-import com.itechart.project.domain.referee.{Referee, RefereeFirstName, RefereeId, RefereeImage, RefereeLastName}
-import com.itechart.project.domain.season.{Season, SeasonId, SeasonName}
-import com.itechart.project.domain.stage.{Stage, StageId, StageName}
-import com.itechart.project.domain.team.{Team, TeamFullName, TeamId, TeamLogo, TeamShortName}
-import com.itechart.project.domain.user.{Email, Login, PasswordHash, Role, User, UserId}
-import com.itechart.project.domain.user_subscriptions.{UserSubscriptionOnPlayer, UserSubscriptionOnTeam}
-import com.itechart.project.domain.venue.{Capacity, Venue, VenueCity, VenueId, VenueName}
+import com.itechart.project.domain.referee._
+import com.itechart.project.domain.season._
+import com.itechart.project.domain.stage._
+import com.itechart.project.domain.team._
+import com.itechart.project.domain.user._
+import com.itechart.project.domain.user_subscriptions._
+import com.itechart.project.domain.venue._
 import com.itechart.project.repository.slick_impl.Implicits._
-import slick.lifted.TableQuery
 import slick.jdbc.MySQLProfile.api._
+import slick.lifted.TableQuery
 
-import java.sql.{Date, Time}
+import java.time.{LocalDate, LocalTime}
 
 object Tables {
 
@@ -125,8 +114,8 @@ object Tables {
     val leagueId:            Rep[LeagueId]     = column[LeagueId]("league_id")
     val stageId:             Rep[StageId]      = column[StageId]("stage_id")
     val status:              Rep[Status]       = column[Status]("status")
-    val startDate:           Rep[Date]         = column[Date]("start_date")
-    val startTime:           Rep[Time]         = column[Time]("start_time")
+    val startDate:           Rep[LocalDate]    = column[LocalDate]("start_date")
+    val startTime:           Rep[LocalTime]    = column[LocalTime]("start_time")
     val homeTeamId:          Rep[TeamId]       = column[TeamId]("home_team_id")
     val awayTeamId:          Rep[TeamId]       = column[TeamId]("away_team_id")
     val venueId:             Rep[VenueId]      = column[VenueId]("venue_id")
@@ -244,7 +233,7 @@ object Tables {
     val id:        Rep[PlayerId]            = column[PlayerId]("id", O.AutoInc, O.PrimaryKey)
     val firstName: Rep[FirstName]           = column[FirstName]("first_name")
     val lastName:  Rep[LastName]            = column[LastName]("last_name")
-    val birthday:  Rep[Date]                = column[Date]("birthday")
+    val birthday:  Rep[LocalDate]           = column[LocalDate]("birthday")
     val age:       Rep[Age]                 = column[Age]("age")
     val weight:    Rep[Option[Weight]]      = column[Option[Weight]]("weight")
     val height:    Rep[Option[Height]]      = column[Option[Height]]("height")
@@ -308,8 +297,8 @@ object Tables {
     val id:        Rep[SeasonId]   = column[SeasonId]("id", O.AutoInc, O.PrimaryKey)
     val name:      Rep[SeasonName] = column[SeasonName]("name", O.Unique)
     val isCurrent: Rep[Boolean]    = column[Boolean]("is_current")
-    val startDate: Rep[Date]       = column[Date]("start_date")
-    val endDate:   Rep[Date]       = column[Date]("end_date")
+    val startDate: Rep[LocalDate]  = column[LocalDate]("start_date")
+    val endDate:   Rep[LocalDate]  = column[LocalDate]("end_date")
   }
 
   class StageTable(tag: Tag) extends Table[Stage](tag, None, "stages") {

@@ -4,7 +4,7 @@ import eu.timepit.refined.W
 import eu.timepit.refined.api.Refined
 import eu.timepit.refined.string.MatchesRegex
 
-import java.sql.Date
+import java.time.LocalDate
 
 object season {
 
@@ -16,8 +16,8 @@ object season {
     id:        SeasonId,
     name:      SeasonName,
     isCurrent: Boolean,
-    startDate: Date,
-    endDate:   Date
+    startDate: LocalDate,
+    endDate:   LocalDate
   )
 
 }
