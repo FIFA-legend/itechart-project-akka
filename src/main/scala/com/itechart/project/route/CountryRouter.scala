@@ -13,7 +13,7 @@ import spray.json._
 
 import scala.concurrent.ExecutionContext
 
-class CountryRoute(countryService: ActorRef, implicit val timeout: Timeout, implicit val ec: ExecutionContext)
+class CountryRouter(countryService: ActorRef)(implicit timeout: Timeout, ec: ExecutionContext)
   extends CountryJsonProtocol
     with SprayJsonSupport {
 

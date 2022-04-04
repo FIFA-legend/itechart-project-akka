@@ -11,13 +11,13 @@ import com.itechart.project.dto.JsonConverters.FormationJsonProtocol
 
 import scala.concurrent.ExecutionContext
 
-class FormationRoute(formationService: ActorRef, implicit val timeout: Timeout, implicit val ec: ExecutionContext)
+class FormationRouter(formationService: ActorRef)(implicit timeout: Timeout, ec: ExecutionContext)
   extends FormationJsonProtocol
     with SprayJsonSupport {
 
   import com.itechart.project.service.FormationService._
 
-  val leagueRoutes: Route = {
+  val formationRoutes: Route = {
     pathPrefix("api" / "formations") {
       get {
         (path(IntNumber) | parameter("id".as[Int])) { id =>

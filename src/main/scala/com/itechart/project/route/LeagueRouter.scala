@@ -13,7 +13,7 @@ import spray.json._
 
 import scala.concurrent.ExecutionContext
 
-class LeagueRoute(leagueService: ActorRef, implicit val timeout: Timeout, implicit val ec: ExecutionContext)
+class LeagueRouter(leagueService: ActorRef)(implicit timeout: Timeout, ec: ExecutionContext)
   extends LeagueJsonProtocol
     with SprayJsonSupport {
 
