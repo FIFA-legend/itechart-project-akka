@@ -39,7 +39,7 @@ class SlickSeasonRepository(db: MySQLProfile.backend.Database)(implicit ec: Exec
   override def update(season: Season): Future[Int] = {
     val updateSeasonQuery = seasonTable
       .filter(_.id === season.id)
-      .map(season => (season.name, season.isCurrent, season.startDate, season.startDate))
+      .map(season => (season.name, season.isCurrent, season.startDate, season.endDate))
       .update((season.name, season.isCurrent, season.startDate, season.endDate))
     db.run(updateSeasonQuery)
   }

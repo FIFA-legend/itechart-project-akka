@@ -119,7 +119,7 @@ class LeagueRouter(leagueService: ActorRef)(implicit timeout: Timeout, ec: Execu
                 Utils.responseOk()
               case LeagueValidationErrors(errors) =>
                 Utils.responseBadRequestWithBody(errors.map(_.message))
-              case LeagueValidationErrors =>
+              case LeagueInternalServerError =>
                 HttpResponse(status = StatusCodes.InternalServerError)
             }
             complete(responseFuture)

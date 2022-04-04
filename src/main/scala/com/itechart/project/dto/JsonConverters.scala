@@ -3,7 +3,19 @@ package com.itechart.project.dto
 import com.itechart.project.dto.country.CountryApiDto
 import com.itechart.project.dto.formation.FormationApiDto
 import com.itechart.project.dto.league.LeagueApiDto
-import spray.json.{DefaultJsonProtocol, DeserializationException, JsNumber, JsObject, JsString, JsValue, RootJsonFormat}
+import com.itechart.project.dto.season.SeasonApiDto
+import spray.json.{
+  DefaultJsonProtocol,
+  DeserializationException,
+  JsBoolean,
+  JsNumber,
+  JsObject,
+  JsString,
+  JsValue,
+  RootJsonFormat
+}
+
+import java.sql.Date
 
 object JsonConverters {
 
@@ -26,6 +38,23 @@ object JsonConverters {
     }
   }
 
+  trait FormationJsonProtocol extends DefaultJsonProtocol {
+    implicit object FormationJsonFormat extends RootJsonFormat[FormationApiDto] {
+      override def read(value: JsValue): FormationApiDto = {
+        value.asJsObject.getFields("formation_id", "name") match {
+          case Seq(JsNumber(id), JsString(name)) =>
+            FormationApiDto(id.toInt, name)
+          case _ => throw DeserializationException("Formation expected")
+        }
+      }
+
+      override def write(formation: FormationApiDto): JsValue = JsObject(
+        "formation_id" -> JsNumber(formation.id),
+        "name"         -> JsString(formation.name)
+      )
+    }
+  }
+
   trait LeagueJsonProtocol extends DefaultJsonProtocol {
     implicit object LeagueJsonFormat extends RootJsonFormat[LeagueApiDto] {
       override def read(value: JsValue): LeagueApiDto = {
@@ -44,19 +73,22 @@ object JsonConverters {
     }
   }
 
-  trait FormationJsonProtocol extends DefaultJsonProtocol {
-    implicit object FormationJsonFormat extends RootJsonFormat[FormationApiDto] {
-      override def read(value: JsValue): FormationApiDto = {
-        value.asJsObject.getFields("formation_id", "name") match {
-          case Seq(JsNumber(id), JsString(name)) =>
-            FormationApiDto(id.toInt, name)
-          case _ => throw DeserializationException("Formation expected")
+  trait SeasonJsonProtocol extends DefaultJsonProtocol {
+    implicit object SeasonJsonFormat extends RootJsonFormat[SeasonApiDto] {
+      override def read(value: JsValue): SeasonApiDto = {
+        value.asJsObject.getFields("season_id", "name", "is_current", "start_date", "end_date") match {
+          case Seq(JsNumber(id), JsString(name), JsBoolean(isCurrent), JsString(startDate), JsString(endDate)) =>
+            SeasonApiDto(id.toInt, name, isCurrent, Date.valueOf(startDate), Date.valueOf(endDate))
+          case _ => throw DeserializationException("Season expected")
         }
       }
 
-      override def write(formation: FormationApiDto): JsValue = JsObject(
-        "formation_id" -> JsNumber(formation.id),
-        "name"         -> JsString(formation.name)
+      override def write(season: SeasonApiDto): JsValue = JsObject(
+        "season_id"  -> JsNumber(season.id),
+        "name"       -> JsString(season.name),
+        "is_current" -> JsBoolean(season.isCurrent),
+        "start_date" -> JsString(season.startDate.toString),
+        "end_date"   -> JsString(season.endDate.toString)
       )
     }
   }
