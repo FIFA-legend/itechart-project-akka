@@ -71,7 +71,7 @@ class FormationService(formationRepository: FormationRepository, implicit val ex
 }
 
 object FormationService {
-  def apply(formationRepository: FormationRepository)(implicit ec: ExecutionContext): Props = Props(
+  def props(formationRepository: FormationRepository)(implicit ec: ExecutionContext): Props = Props(
     new FormationService(formationRepository, ec)
   )
 

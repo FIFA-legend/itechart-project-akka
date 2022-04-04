@@ -220,7 +220,7 @@ class LeagueService(
 }
 
 object LeagueService {
-  def apply(
+  def props(
     leagueRepository:  LeagueRepository,
     countryRepository: CountryRepository
   )(

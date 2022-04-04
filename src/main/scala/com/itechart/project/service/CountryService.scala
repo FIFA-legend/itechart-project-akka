@@ -255,7 +255,7 @@ class CountryService(
 }
 
 object CountryService {
-  def apply(countryRepository: CountryRepository)(implicit ec: ExecutionContext, timeout: Timeout): Props = Props(
+  def props(countryRepository: CountryRepository)(implicit ec: ExecutionContext, timeout: Timeout): Props = Props(
     new CountryService(countryRepository, ec, timeout)
   )
 
