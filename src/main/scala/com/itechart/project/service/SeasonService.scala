@@ -7,13 +7,7 @@ import com.itechart.project.domain.season.{Season, SeasonId}
 import com.itechart.project.dto.season.SeasonApiDto
 import com.itechart.project.repository.SeasonRepository
 import com.itechart.project.service.domain_errors.SeasonErrors.SeasonError
-import com.itechart.project.service.domain_errors.SeasonErrors.SeasonError.{
-  DuplicateSeasonName,
-  InvalidSeasonEndDate,
-  InvalidSeasonName,
-  InvalidSeasonStartDate,
-  SeasonForeignKey
-}
+import com.itechart.project.service.domain_errors.SeasonErrors.SeasonError._
 import com.itechart.project.utils.RefinedConversions.validateParameter
 import eu.timepit.refined.W
 import eu.timepit.refined.string.MatchesRegex
@@ -23,11 +17,8 @@ import java.time.temporal.ChronoUnit
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.{Failure, Success}
 
-class SeasonService(
-  seasonRepository:     SeasonRepository,
-  implicit val ec:      ExecutionContext,
-  implicit val timeout: Timeout
-) extends Actor
+class SeasonService(seasonRepository: SeasonRepository)(implicit ec: ExecutionContext, timeout: Timeout)
+  extends Actor
     with ActorLogging {
   import SeasonService._
 
@@ -229,9 +220,8 @@ class SeasonService(
 }
 
 object SeasonService {
-  def props(seasonRepository: SeasonRepository)(implicit ec: ExecutionContext, timeout: Timeout): Props = Props(
-    new SeasonService(seasonRepository, ec, timeout)
-  )
+  def props(seasonRepository: SeasonRepository)(implicit ec: ExecutionContext, timeout: Timeout): Props =
+    Props(new SeasonService(seasonRepository))
 
   case object GetAllSeasons
   case class GetSeasonById(id: Int)

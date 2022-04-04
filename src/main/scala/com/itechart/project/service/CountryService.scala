@@ -16,11 +16,8 @@ import java.sql.SQLIntegrityConstraintViolationException
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.{Failure, Success}
 
-class CountryService(
-  countryRepository:    CountryRepository,
-  implicit val ec:      ExecutionContext,
-  implicit val timeout: Timeout
-) extends Actor
+class CountryService(countryRepository: CountryRepository)(implicit ec: ExecutionContext, timeout: Timeout)
+  extends Actor
     with ActorLogging {
   import CountryService._
 
@@ -255,9 +252,8 @@ class CountryService(
 }
 
 object CountryService {
-  def props(countryRepository: CountryRepository)(implicit ec: ExecutionContext, timeout: Timeout): Props = Props(
-    new CountryService(countryRepository, ec, timeout)
-  )
+  def props(countryRepository: CountryRepository)(implicit ec: ExecutionContext, timeout: Timeout): Props =
+    Props(new CountryService(countryRepository))
 
   case object GetAllCountries
   case class GetCountryById(id: Int)

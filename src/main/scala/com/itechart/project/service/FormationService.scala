@@ -11,7 +11,7 @@ import com.itechart.project.utils.FormationNameConversion
 import scala.concurrent.ExecutionContext
 import scala.util.{Failure, Success, Try}
 
-class FormationService(formationRepository: FormationRepository, implicit val ex: ExecutionContext)
+class FormationService(formationRepository: FormationRepository)(implicit ec: ExecutionContext)
   extends Actor
     with ActorLogging {
   import FormationService._
@@ -71,9 +71,8 @@ class FormationService(formationRepository: FormationRepository, implicit val ex
 }
 
 object FormationService {
-  def props(formationRepository: FormationRepository)(implicit ec: ExecutionContext): Props = Props(
-    new FormationService(formationRepository, ec)
-  )
+  def props(formationRepository: FormationRepository)(implicit ec: ExecutionContext): Props =
+    Props(new FormationService(formationRepository))
 
   case object GetAllFormations
   case class GetFormationById(id: Int)

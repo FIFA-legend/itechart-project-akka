@@ -17,10 +17,11 @@ import scala.concurrent.{ExecutionContext, Future}
 import scala.util.{Failure, Success}
 
 class LeagueService(
-  leagueRepository:     LeagueRepository,
-  countryRepository:    CountryRepository,
-  implicit val ec:      ExecutionContext,
-  implicit val timeout: Timeout
+  leagueRepository:  LeagueRepository,
+  countryRepository: CountryRepository
+)(
+  implicit ec: ExecutionContext,
+  timeout:     Timeout
 ) extends Actor
     with ActorLogging {
   import LeagueService._
@@ -226,9 +227,7 @@ object LeagueService {
   )(
     implicit ec: ExecutionContext,
     timeout:     Timeout
-  ): Props = Props(
-    new LeagueService(leagueRepository, countryRepository, ec, timeout)
-  )
+  ): Props = Props(new LeagueService(leagueRepository, countryRepository))
 
   case object GetAllLeagues
   case class GetLeagueById(id: Int)
