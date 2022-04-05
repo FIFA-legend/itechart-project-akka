@@ -206,11 +206,8 @@ class LeagueService(
   } yield duplicatedNameError ++ countryNotFoundError
 
   private def validateLeagueDto(leagueDto: LeagueApiDto): Either[List[LeagueError], League] = {
-    val validatedNameEither =
-      validateParameter[LeagueError, String, NonEmpty](leagueDto.name, InvalidLeagueName(leagueDto.name))
-
     val result = for {
-      name <- validatedNameEither
+      name <- validateParameter[LeagueError, String, NonEmpty](leagueDto.name, InvalidLeagueName(leagueDto.name))
     } yield League(LeagueId(leagueDto.id), name, CountryId(leagueDto.countryId))
 
     result.left.map(List(_))

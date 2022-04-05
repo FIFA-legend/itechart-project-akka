@@ -4,6 +4,7 @@ import com.itechart.project.dto.country.CountryApiDto
 import com.itechart.project.dto.formation.FormationApiDto
 import com.itechart.project.dto.league.LeagueApiDto
 import com.itechart.project.dto.season.SeasonApiDto
+import com.itechart.project.dto.stage.StageApiDto
 import spray.json._
 
 import java.time.LocalDate
@@ -80,6 +81,23 @@ object JsonConverters {
         "is_current" -> JsBoolean(season.isCurrent),
         "start_date" -> JsString(season.startDate.toString),
         "end_date"   -> JsString(season.endDate.toString)
+      )
+    }
+  }
+
+  trait StageJsonProtocol extends DefaultJsonProtocol {
+    implicit object StageJsonFormat extends RootJsonFormat[StageApiDto] {
+      override def read(value: JsValue): StageApiDto = {
+        value.asJsObject.getFields("stage_id", "name") match {
+          case Seq(JsNumber(id), JsString(name)) =>
+            StageApiDto(id.toInt, name)
+          case _ => throw DeserializationException("Stage expected")
+        }
+      }
+
+      override def write(stage: StageApiDto): JsValue = JsObject(
+        "stage_id" -> JsNumber(stage.id),
+        "name"     -> JsString(stage.name)
       )
     }
   }
