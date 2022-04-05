@@ -9,6 +9,8 @@ import akka.pattern.ask
 import akka.util.Timeout
 import com.itechart.project.dto.JsonConverters.CountryJsonProtocol
 import com.itechart.project.dto.country.CountryApiDto
+import com.itechart.project.service.CommonServiceMessages.Requests._
+import com.itechart.project.service.CommonServiceMessages.Responses._
 import spray.json._
 
 import scala.concurrent.ExecutionContext
@@ -23,47 +25,47 @@ class CountryRouter(countryService: ActorRef)(implicit timeout: Timeout, ec: Exe
     pathPrefix("api" / "countries") {
       get {
         (path(IntNumber) | parameter("id".as[Int])) { id =>
-          val responseFuture = (countryService ? GetCountryById(id)).map {
-            case FoundCountry(None) =>
+          val responseFuture = (countryService ? GetEntityByT(id)).map {
+            case OneFoundEntity(None) =>
               HttpResponse(status = StatusCodes.NotFound)
-            case FoundCountry(Some(country)) =>
+            case OneFoundEntity(Some(country: CountryApiDto)) =>
               Utils.responseOkWithBody(country)
-            case CountryInternalServerError =>
+            case InternalServerError =>
               HttpResponse(status = StatusCodes.InternalServerError)
           }
           complete(responseFuture)
         } ~
           parameter("name") { name =>
-            val responseFuture = (countryService ? GetCountryByName(name)).map {
-              case FoundCountry(None) =>
+            val responseFuture = (countryService ? GetEntityByT(name)).map {
+              case OneFoundEntity(None) =>
                 HttpResponse(status = StatusCodes.NotFound)
-              case FoundCountry(Some(country)) =>
+              case OneFoundEntity(Some(country: CountryApiDto)) =>
                 Utils.responseOkWithBody(country)
               case CountryValidationErrors(errors) =>
                 Utils.responseBadRequestWithBody(errors.map(_.message))
-              case CountryInternalServerError =>
+              case InternalServerError =>
                 HttpResponse(status = StatusCodes.InternalServerError)
             }
             complete(responseFuture)
           } ~
           parameter("code") { code =>
             val responseFuture = (countryService ? GetCountryByCode(code)).map {
-              case FoundCountry(None) =>
+              case OneFoundEntity(None) =>
                 HttpResponse(status = StatusCodes.NotFound)
-              case FoundCountry(Some(country)) =>
+              case OneFoundEntity(Some(country: CountryApiDto)) =>
                 Utils.responseOkWithBody(country)
               case CountryValidationErrors(errors) =>
                 Utils.responseBadRequestWithBody(errors.map(_.message))
-              case CountryInternalServerError =>
+              case InternalServerError =>
                 HttpResponse(status = StatusCodes.InternalServerError)
             }
             complete(responseFuture)
           } ~
           pathEndOrSingleSlash {
-            val responseFuture = (countryService ? GetAllCountries).map {
-              case FoundCountries(countries) =>
+            val responseFuture = (countryService ? GetAllEntities).map {
+              case AllFoundCountries(countries) =>
                 Utils.responseOkWithBody(countries)
-              case CountryInternalServerError =>
+              case InternalServerError =>
                 HttpResponse(status = StatusCodes.InternalServerError)
             }
             complete(responseFuture)
@@ -72,14 +74,14 @@ class CountryRouter(countryService: ActorRef)(implicit timeout: Timeout, ec: Exe
         post {
           path("all") {
             entity(as[List[CountryApiDto]]) { countryDtoList =>
-              val responseFuture = (countryService ? AddCountries(countryDtoList)).map {
-                case CountriesAdded(countries, errors) =>
+              val responseFuture = (countryService ? AddAllCountries(countryDtoList)).map {
+                case AllCountriesAdded(countries, errors) =>
                   val map = Map(
                     "countries" -> countries.toJson.prettyPrint,
                     "errors"    -> errors.map(_.message).mkString("[", ", ", "]")
                   )
                   Utils.responseOkWithBody(map)
-                case CountryInternalServerError =>
+                case InternalServerError =>
                   HttpResponse(status = StatusCodes.InternalServerError)
               }
               complete(responseFuture)
@@ -87,12 +89,12 @@ class CountryRouter(countryService: ActorRef)(implicit timeout: Timeout, ec: Exe
           } ~
             pathEndOrSingleSlash {
               entity(as[CountryApiDto]) { countryDto =>
-                val responseFuture = (countryService ? AddCountry(countryDto)).map {
-                  case CountryAdded(country) =>
+                val responseFuture = (countryService ? AddOneEntity(countryDto)).map {
+                  case OneEntityAdded(country: CountryApiDto) =>
                     HttpResponse(status = StatusCodes.Created, entity = country.toJson.prettyPrint)
                   case CountryValidationErrors(errors) =>
                     Utils.responseBadRequestWithBody(errors.map(_.message))
-                  case CountryInternalServerError =>
+                  case InternalServerError =>
                     HttpResponse(status = StatusCodes.InternalServerError)
                 }
                 complete(responseFuture)
@@ -101,14 +103,14 @@ class CountryRouter(countryService: ActorRef)(implicit timeout: Timeout, ec: Exe
         } ~
         put {
           entity(as[CountryApiDto]) { countryDto =>
-            val responseFuture = (countryService ? UpdateCountry(countryDto)).map {
-              case CountryNotUpdated =>
+            val responseFuture = (countryService ? UpdateEntity(countryDto)).map {
+              case UpdateFailed =>
                 HttpResponse(status = StatusCodes.NotFound)
-              case CountryUpdated =>
+              case UpdateCompleted =>
                 Utils.responseOk()
               case CountryValidationErrors(errors) =>
                 Utils.responseBadRequestWithBody(errors.map(_.message))
-              case CountryInternalServerError =>
+              case InternalServerError =>
                 HttpResponse(status = StatusCodes.InternalServerError)
             }
             complete(responseFuture)
@@ -116,14 +118,14 @@ class CountryRouter(countryService: ActorRef)(implicit timeout: Timeout, ec: Exe
         } ~
         delete {
           path(IntNumber) { id =>
-            val responseFuture = (countryService ? RemoveCountry(id)).map {
-              case CountryNotDeleted =>
+            val responseFuture = (countryService ? RemoveEntity(id)).map {
+              case RemoveFailed =>
                 Utils.responseBadRequest()
-              case CountryDeleted =>
+              case RemoveCompleted =>
                 Utils.responseOk()
               case CountryValidationErrors(errors) =>
                 Utils.responseBadRequestWithBody(errors.map(_.message))
-              case CountryInternalServerError =>
+              case InternalServerError =>
                 HttpResponse(status = StatusCodes.InternalServerError)
             }
             complete(responseFuture)

@@ -6,6 +6,8 @@ import akka.util.Timeout
 import com.itechart.project.domain.country.{Continent, Country, CountryId}
 import com.itechart.project.dto.country.CountryApiDto
 import com.itechart.project.repository.CountryRepository
+import com.itechart.project.service.CommonServiceMessages.Requests._
+import com.itechart.project.service.CommonServiceMessages.Responses._
 import com.itechart.project.service.domain_errors.CountryErrors.CountryError
 import com.itechart.project.service.domain_errors.CountryErrors.CountryError._
 import com.itechart.project.utils.RefinedConversions.validateParameter
@@ -22,33 +24,33 @@ class CountryService(countryRepository: CountryRepository)(implicit ec: Executio
   import CountryService._
 
   override def receive: Receive = {
-    case GetAllCountries =>
+    case GetAllEntities =>
       val senderToReturn = sender()
       log.info("Getting all countries from database")
       val countriesFuture = countryRepository.findAll
       countriesFuture.onComplete {
         case Success(countries) =>
           log.info(s"Got ${countries.size} countries out of database")
-          senderToReturn ! FoundCountries(countries.map(domainCountryToDtoCountry))
+          senderToReturn ! AllFoundCountries(countries.map(domainCountryToDtoCountry))
         case Failure(ex) =>
           log.error(s"An error occurred while extracting all countries out of database: $ex")
-          senderToReturn ! CountryInternalServerError
+          senderToReturn ! InternalServerError
       }
 
-    case GetCountryById(id) =>
+    case GetEntityByT(id: Int) =>
       val senderToReturn = sender()
       log.info(s"Getting country with id = $id")
       val countryFuture = countryRepository.findById(CountryId(id))
       countryFuture.onComplete {
         case Success(maybeCountry) =>
           log.info(s"Country with id = $id ${if (maybeCountry.isEmpty) "not "}found")
-          senderToReturn ! FoundCountry(maybeCountry.map(domainCountryToDtoCountry))
+          senderToReturn ! OneFoundEntity(maybeCountry.map(domainCountryToDtoCountry))
         case Failure(ex) =>
           log.error(s"An error occurred while extracting a country with id = $id: $ex")
-          senderToReturn ! CountryInternalServerError
+          senderToReturn ! InternalServerError
       }
 
-    case GetCountryByName(name) =>
+    case GetEntityByT(name: String) =>
       val senderToReturn = sender()
       log.info(s"Getting country with name = $name")
       val validatedNameEither =
@@ -63,10 +65,10 @@ class CountryService(countryRepository: CountryRepository)(implicit ec: Executio
           countryFuture.onComplete {
             case Success(maybeCountry) =>
               log.info(s"Country with name = $name ${if (maybeCountry.isEmpty) "not " else ""}found")
-              senderToReturn ! FoundCountry(maybeCountry.map(domainCountryToDtoCountry))
+              senderToReturn ! OneFoundEntity(maybeCountry.map(domainCountryToDtoCountry))
             case Failure(ex) =>
               log.error(s"An error occurred while extracting a country with name = $name: $ex")
-              senderToReturn ! CountryInternalServerError
+              senderToReturn ! InternalServerError
           }
       }
 
@@ -85,14 +87,14 @@ class CountryService(countryRepository: CountryRepository)(implicit ec: Executio
           countryFuture.onComplete {
             case Success(maybeCountry) =>
               log.info(s"Country with code = $code ${if (maybeCountry.isEmpty) "not " else ""}found")
-              senderToReturn ! FoundCountry(maybeCountry.map(domainCountryToDtoCountry))
+              senderToReturn ! OneFoundEntity(maybeCountry.map(domainCountryToDtoCountry))
             case Failure(ex) =>
               log.error(s"An error occurred while extracting a country with code = $code: $ex")
-              senderToReturn ! CountryInternalServerError
+              senderToReturn ! InternalServerError
           }
       }
 
-    case AddCountry(countryDto) =>
+    case AddOneEntity(countryDto: CountryApiDto) =>
       val senderToReturn = sender()
       log.info(s"Adding a country = $countryDto")
       val validatedCountry = validateCountryDto(countryDto)
@@ -109,25 +111,25 @@ class CountryService(countryRepository: CountryRepository)(implicit ec: Executio
           countryIdOrErrors.onComplete {
             case Success(Right(id)) =>
               log.info(s"Country $country successfully created")
-              senderToReturn ! CountryAdded(countryDto.copy(id = id.value))
+              senderToReturn ! OneEntityAdded(countryDto.copy(id = id.value))
             case Success(Left(errors)) =>
               log.info(s"Country $country doesn't created because of: ${errors.mkString("[", ", ", "]")}")
               senderToReturn ! CountryValidationErrors(errors)
             case Failure(ex) =>
               log.error(s"An error occurred while creating a country $country: $ex")
-              senderToReturn ! CountryInternalServerError
+              senderToReturn ! InternalServerError
           }
       }
 
-    case AddCountries(countryDtoList) =>
+    case AddAllCountries(countryDtoList) =>
       val senderToReturn = sender()
       log.info(s"Adding countries $countryDtoList")
-      val addedCountries = Future.traverse(countryDtoList.map(self ? AddCountry(_)))(identity)
+      val addedCountries = Future.traverse(countryDtoList.map(self ? AddOneEntity(_)))(identity)
       addedCountries.onComplete {
         case Success(list) =>
           val countries: List[CountryApiDto] = list.flatMap {
-            case CountryAdded(country) => List(country)
-            case _                     => List()
+            case OneEntityAdded(country: CountryApiDto) => List(country)
+            case _ => List()
           }
           val errors: List[CountryError] = list.flatMap {
             case CountryValidationErrors(errors) => errors
@@ -135,13 +137,13 @@ class CountryService(countryRepository: CountryRepository)(implicit ec: Executio
           }
           log.info(s"Countries $countries added successfully")
           log.info(s"Other countries aren't added because of: ${errors.mkString("[", ", ", "]")}")
-          senderToReturn ! CountriesAdded(countries, errors)
+          senderToReturn ! AllCountriesAdded(countries, errors)
         case Failure(ex) =>
           log.error(s"An error occurred while creating countries $countryDtoList: $ex")
-          senderToReturn ! CountryInternalServerError
+          senderToReturn ! InternalServerError
       }
 
-    case UpdateCountry(countryDto) =>
+    case UpdateEntity(countryDto: CountryApiDto) =>
       val senderToReturn = sender()
       log.info(s"Updating a country = $countryDto")
       val validatedCountry = validateCountryDto(countryDto)
@@ -158,32 +160,32 @@ class CountryService(countryRepository: CountryRepository)(implicit ec: Executio
           rowsUpdatedOrErrors.onComplete {
             case Success(Right(rowsUpdated)) =>
               log.info(s"Country $country is ${if (rowsUpdated == 0) "not " else ""}updated")
-              val result = if (rowsUpdated == 0) CountryNotUpdated else CountryUpdated
+              val result = if (rowsUpdated == 0) UpdateFailed else UpdateCompleted
               senderToReturn ! result
             case Success(Left(errors)) =>
               log.info(s"Country $country isn't updated because of: ${errors.mkString("[", ", ", "]")}")
               senderToReturn ! CountryValidationErrors(errors)
             case Failure(ex) =>
               log.error(s"An error occurred while updating a country $country: $ex")
-              senderToReturn ! CountryInternalServerError
+              senderToReturn ! InternalServerError
           }
       }
 
-    case RemoveCountry(id) =>
+    case RemoveEntity(id: Int) =>
       val senderToReturn = sender()
       log.info(s"Deleting country with id = $id")
       val countryFuture = countryRepository.delete(CountryId(id))
       countryFuture.onComplete {
         case Success(rowsDeleted) =>
           log.info(s"Country with id = $id ${if (rowsDeleted == 0) "not " else ""}deleted")
-          val result = if (rowsDeleted == 0) CountryNotDeleted else CountryDeleted
+          val result = if (rowsDeleted == 0) RemoveFailed else RemoveCompleted
           senderToReturn ! result
         case Failure(_: SQLIntegrityConstraintViolationException) =>
           log.info(s"A country with id = $id can't be deleted because it's a part of foreign key")
           senderToReturn ! CountryValidationErrors(List(CountryForeignKey(id)))
         case Failure(ex) =>
           log.error(s"An error occurred while deleting a country with id = $id: $ex")
-          senderToReturn ! CountryInternalServerError
+          senderToReturn ! InternalServerError
       }
   }
 
@@ -255,23 +257,10 @@ object CountryService {
   def props(countryRepository: CountryRepository)(implicit ec: ExecutionContext, timeout: Timeout): Props =
     Props(new CountryService(countryRepository))
 
-  case object GetAllCountries
-  case class GetCountryById(id: Int)
-  case class GetCountryByName(name: String)
   case class GetCountryByCode(code: String)
-  case class AddCountry(countryDto: CountryApiDto)
-  case class AddCountries(countryDtoList: List[CountryApiDto])
-  case class UpdateCountry(countryDto: CountryApiDto)
-  case class RemoveCountry(id: Int)
+  case class AddAllCountries(countryDtoList: List[CountryApiDto])
 
-  case class FoundCountries(countries: List[CountryApiDto])
-  case class FoundCountry(maybeCountry: Option[CountryApiDto])
+  case class AllFoundCountries(countries: List[CountryApiDto])
   case class CountryValidationErrors(errors: List[CountryError])
-  case class CountryAdded(country: CountryApiDto)
-  case class CountriesAdded(countries: List[CountryApiDto], errors: List[CountryError])
-  case object CountryUpdated
-  case object CountryNotUpdated
-  case object CountryDeleted
-  case object CountryNotDeleted
-  case object CountryInternalServerError
+  case class AllCountriesAdded(countries: List[CountryApiDto], errors: List[CountryError])
 }
