@@ -9,6 +9,8 @@ import akka.util.Timeout
 import akka.pattern.ask
 import com.itechart.project.dto.JsonConverters.SeasonJsonProtocol
 import com.itechart.project.dto.season.SeasonApiDto
+import com.itechart.project.service.CommonServiceMessages.Requests._
+import com.itechart.project.service.CommonServiceMessages.Responses._
 import spray.json._
 
 import scala.concurrent.ExecutionContext
@@ -23,34 +25,34 @@ class SeasonRouter(seasonService: ActorRef)(implicit timeout: Timeout, ec: Execu
     pathPrefix("api" / "seasons") {
       get {
         (path(IntNumber) | parameter("id".as[Int])) { id =>
-          val responseFuture = (seasonService ? GetSeasonById(id)).map {
-            case FoundSeason(None) =>
+          val responseFuture = (seasonService ? GetEntityByT(id)).map {
+            case OneFoundEntity(None) =>
               HttpResponse(status = StatusCodes.NotFound)
-            case FoundSeason(Some(season)) =>
+            case OneFoundEntity(Some(season: SeasonApiDto)) =>
               Utils.responseBadRequestWithBody(season)
-            case SeasonInternalServerError =>
+            case InternalServerError =>
               HttpResponse(status = StatusCodes.InternalServerError)
           }
           complete(responseFuture)
         } ~
           parameter("name") { name =>
-            val responseFuture = (seasonService ? GetSeasonByName(name)).map {
-              case FoundSeason(None) =>
+            val responseFuture = (seasonService ? GetEntityByT(name)).map {
+              case OneFoundEntity(None) =>
                 HttpResponse(status = StatusCodes.NotFound)
-              case FoundSeason(Some(season)) =>
+              case OneFoundEntity(Some(season: SeasonApiDto)) =>
                 Utils.responseOkWithBody(season)
               case SeasonValidationErrors(errors) =>
                 Utils.responseBadRequestWithBody(errors.map(_.message))
-              case SeasonInternalServerError =>
+              case InternalServerError =>
                 HttpResponse(status = StatusCodes.InternalServerError)
             }
             complete(responseFuture)
           } ~
           pathEndOrSingleSlash {
-            val responseFuture = (seasonService ? GetAllSeasons).map {
-              case FoundSeasons(leagues) =>
+            val responseFuture = (seasonService ? GetAllEntities).map {
+              case AllFoundSeasons(leagues) =>
                 Utils.responseOkWithBody(leagues)
-              case SeasonInternalServerError =>
+              case InternalServerError =>
                 HttpResponse(status = StatusCodes.InternalServerError)
             }
             complete(responseFuture)
@@ -59,14 +61,14 @@ class SeasonRouter(seasonService: ActorRef)(implicit timeout: Timeout, ec: Execu
         post {
           path("all") {
             entity(as[List[SeasonApiDto]]) { seasonDtoList =>
-              val responseFuture = (seasonService ? AddSeasons(seasonDtoList)).map {
-                case SeasonsAdded(seasons, errors) =>
+              val responseFuture = (seasonService ? AddAllSeasons(seasonDtoList)).map {
+                case AllSeasonsAdded(seasons, errors) =>
                   val map = Map(
                     "seasons" -> seasons.toJson.prettyPrint,
                     "errors"  -> errors.map(_.message).mkString("[", ", ", "]")
                   )
                   Utils.responseOkWithBody(map)
-                case SeasonInternalServerError =>
+                case InternalServerError =>
                   HttpResponse(status = StatusCodes.InternalServerError)
               }
               complete(responseFuture)
@@ -74,12 +76,12 @@ class SeasonRouter(seasonService: ActorRef)(implicit timeout: Timeout, ec: Execu
           } ~
             pathEndOrSingleSlash {
               entity(as[SeasonApiDto]) { seasonDto =>
-                val responseFuture = (seasonService ? AddSeason(seasonDto)).map {
-                  case SeasonAdded(season) =>
+                val responseFuture = (seasonService ? AddOneEntity(seasonDto)).map {
+                  case OneEntityAdded(season: SeasonApiDto) =>
                     HttpResponse(status = StatusCodes.Created, entity = season.toJson.prettyPrint)
                   case SeasonValidationErrors(errors) =>
                     Utils.responseBadRequestWithBody(errors.map(_.message))
-                  case SeasonInternalServerError =>
+                  case InternalServerError =>
                     HttpResponse(status = StatusCodes.InternalServerError)
                 }
                 complete(responseFuture)
@@ -88,14 +90,14 @@ class SeasonRouter(seasonService: ActorRef)(implicit timeout: Timeout, ec: Execu
         } ~
         put {
           entity(as[SeasonApiDto]) { seasonDto =>
-            val responseFuture = (seasonService ? UpdateSeason(seasonDto)).map {
-              case SeasonNotUpdated =>
+            val responseFuture = (seasonService ? UpdateEntity(seasonDto)).map {
+              case UpdateFailed =>
                 HttpResponse(status = StatusCodes.NotFound)
-              case SeasonUpdated =>
+              case UpdateCompleted =>
                 Utils.responseOk()
               case SeasonValidationErrors(errors) =>
                 Utils.responseBadRequestWithBody(errors.map(_.message))
-              case SeasonInternalServerError =>
+              case InternalServerError =>
                 HttpResponse(status = StatusCodes.InternalServerError)
             }
             complete(responseFuture)
@@ -103,14 +105,14 @@ class SeasonRouter(seasonService: ActorRef)(implicit timeout: Timeout, ec: Execu
         } ~
         delete {
           path(IntNumber) { id =>
-            val responseFuture = (seasonService ? RemoveSeason(id)).map {
-              case SeasonNotDeleted =>
+            val responseFuture = (seasonService ? RemoveEntity(id)).map {
+              case RemoveFailed =>
                 Utils.responseBadRequest()
-              case SeasonDeleted =>
+              case RemoveCompleted =>
                 Utils.responseOk()
               case SeasonValidationErrors(errors) =>
                 Utils.responseBadRequestWithBody(errors.map(_.message))
-              case SeasonInternalServerError =>
+              case InternalServerError =>
                 HttpResponse(status = StatusCodes.InternalServerError)
             }
             complete(responseFuture)

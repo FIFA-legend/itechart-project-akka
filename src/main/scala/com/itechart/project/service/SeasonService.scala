@@ -6,6 +6,8 @@ import akka.util.Timeout
 import com.itechart.project.domain.season.{Season, SeasonId}
 import com.itechart.project.dto.season.SeasonApiDto
 import com.itechart.project.repository.SeasonRepository
+import com.itechart.project.service.CommonServiceMessages.Requests._
+import com.itechart.project.service.CommonServiceMessages.Responses._
 import com.itechart.project.service.domain_errors.SeasonErrors.SeasonError
 import com.itechart.project.service.domain_errors.SeasonErrors.SeasonError._
 import com.itechart.project.utils.RefinedConversions.validateParameter
@@ -24,33 +26,33 @@ class SeasonService(seasonRepository: SeasonRepository)(implicit ec: ExecutionCo
   import SeasonService._
 
   override def receive: Receive = {
-    case GetAllSeasons =>
+    case GetAllEntities =>
       val senderToReturn = sender()
       log.info("Getting all seasons from database")
       val seasonsFuture = seasonRepository.findAll
       seasonsFuture.onComplete {
         case Success(seasons) =>
           log.info(s"Got ${seasons.size} seasons out of database")
-          senderToReturn ! FoundSeasons(seasons.map(domainSeasonToDtoSeason))
+          senderToReturn ! AllFoundSeasons(seasons.map(domainSeasonToDtoSeason))
         case Failure(ex) =>
           log.error(s"An error occurred while extracting all seasons out of database: $ex")
-          senderToReturn ! SeasonInternalServerError
+          senderToReturn ! InternalServerError
       }
 
-    case GetSeasonById(id) =>
+    case GetEntityByT(id: Int) =>
       val senderToReturn = sender()
       log.info(s"Getting season with id = $id")
       val seasonFuture = seasonRepository.findById(SeasonId(id))
       seasonFuture.onComplete {
         case Success(maybeSeason) =>
           log.info(s"Season with id = $id ${if (maybeSeason.isEmpty) "not "}found")
-          senderToReturn ! FoundSeason(maybeSeason.map(domainSeasonToDtoSeason))
+          senderToReturn ! OneFoundEntity(maybeSeason.map(domainSeasonToDtoSeason))
         case Failure(ex) =>
           log.error(s"An error occurred while extracting a league with id = $id: $ex")
-          senderToReturn ! SeasonInternalServerError
+          senderToReturn ! InternalServerError
       }
 
-    case GetSeasonByName(name) =>
+    case GetEntityByT(name: String) =>
       val senderToReturn = sender()
       log.info(s"Getting season with name = $name")
       val validatedNameEither =
@@ -65,14 +67,14 @@ class SeasonService(seasonRepository: SeasonRepository)(implicit ec: ExecutionCo
           seasonFuture.onComplete {
             case Success(maybeSeason) =>
               log.info(s"Season with name = $name ${if (maybeSeason.isEmpty) "not " else ""}found")
-              senderToReturn ! FoundSeason(maybeSeason.map(domainSeasonToDtoSeason))
+              senderToReturn ! OneFoundEntity(maybeSeason.map(domainSeasonToDtoSeason))
             case Failure(ex) =>
               log.error(s"An error occurred while extracting a season with name = $name: $ex")
-              senderToReturn ! SeasonInternalServerError
+              senderToReturn ! InternalServerError
           }
       }
 
-    case AddSeason(seasonDto) =>
+    case AddOneEntity(seasonDto: SeasonApiDto) =>
       val senderToReturn = sender()
       log.info(s"Adding a season = $seasonDto")
       val validatedSeason = validateSeasonDto(seasonDto)
@@ -89,25 +91,25 @@ class SeasonService(seasonRepository: SeasonRepository)(implicit ec: ExecutionCo
           seasonIdOrErrors.onComplete {
             case Success(Right(id)) =>
               log.info(s"Season $season successfully created")
-              senderToReturn ! SeasonAdded(seasonDto.copy(id = id.value))
+              senderToReturn ! OneEntityAdded(seasonDto.copy(id = id.value))
             case Success(Left(errors)) =>
               log.info(s"Season $season doesn't created because of: ${errors.mkString("[", ", ", "]")}")
               senderToReturn ! SeasonValidationErrors(errors)
             case Failure(ex) =>
               log.error(s"An error occurred while creating a season $season: $ex")
-              senderToReturn ! SeasonInternalServerError
+              senderToReturn ! InternalServerError
           }
       }
 
-    case AddSeasons(seasonDtoList) =>
+    case AddAllSeasons(seasonDtoList) =>
       val senderToReturn = sender()
       log.info(s"Adding seasons $seasonDtoList")
-      val addedSeasons = Future.traverse(seasonDtoList.map(self ? AddSeason(_)))(identity)
+      val addedSeasons = Future.traverse(seasonDtoList.map(self ? AddOneEntity(_)))(identity)
       addedSeasons.onComplete {
         case Success(list) =>
           val seasons: List[SeasonApiDto] = list.flatMap {
-            case SeasonAdded(season) => List(season)
-            case _                   => List()
+            case OneEntityAdded(season: SeasonApiDto) => List(season)
+            case _ => List()
           }
           val errors: List[SeasonError] = list.flatMap {
             case SeasonValidationErrors(errors) => errors
@@ -115,13 +117,13 @@ class SeasonService(seasonRepository: SeasonRepository)(implicit ec: ExecutionCo
           }
           log.info(s"Seasons $seasons added successfully")
           log.info(s"Other seasons aren't added because of: ${errors.mkString("[", ", ", "]")}")
-          senderToReturn ! SeasonsAdded(seasons, errors)
+          senderToReturn ! AllSeasonsAdded(seasons, errors)
         case Failure(ex) =>
           log.error(s"An error occurred while creating seasons $seasonDtoList: $ex")
-          senderToReturn ! SeasonInternalServerError
+          senderToReturn ! InternalServerError
       }
 
-    case UpdateSeason(seasonDto) =>
+    case UpdateEntity(seasonDto: SeasonApiDto) =>
       val senderToReturn = sender()
       log.info(s"Updating a season = $seasonDto")
       val validatedSeason = validateSeasonDto(seasonDto)
@@ -138,32 +140,32 @@ class SeasonService(seasonRepository: SeasonRepository)(implicit ec: ExecutionCo
           rowsUpdatedOrErrors.onComplete {
             case Success(Right(rowsUpdated)) =>
               log.info(s"Season $season is ${if (rowsUpdated == 0) "not " else ""}updated")
-              val result = if (rowsUpdated == 0) SeasonNotUpdated else SeasonUpdated
+              val result = if (rowsUpdated == 0) UpdateFailed else UpdateCompleted
               senderToReturn ! result
             case Success(Left(errors)) =>
               log.info(s"Season $season isn't updated because of: ${errors.mkString("[", ", ", "]")}")
               senderToReturn ! SeasonValidationErrors(errors)
             case Failure(ex) =>
               log.error(s"An error occurred while updating a season $season: $ex")
-              senderToReturn ! SeasonInternalServerError
+              senderToReturn ! InternalServerError
           }
       }
 
-    case RemoveSeason(id) =>
+    case RemoveEntity(id: Int) =>
       val senderToReturn = sender()
       log.info(s"Deleting season with id = $id")
       val seasonFuture = seasonRepository.delete(SeasonId(id))
       seasonFuture.onComplete {
         case Success(rowsDeleted) =>
           log.info(s"Season with id = $id ${if (rowsDeleted == 0) "not " else ""}removed")
-          val result = if (rowsDeleted == 0) SeasonNotDeleted else SeasonDeleted
+          val result = if (rowsDeleted == 0) RemoveFailed else RemoveCompleted
           senderToReturn ! result
         case Failure(_: SQLIntegrityConstraintViolationException) =>
           log.info(s"A season with id = $id can't be deleted because it's a part of foreign key")
           senderToReturn ! SeasonValidationErrors(List(SeasonForeignKey(id)))
         case Failure(ex) =>
           log.error(s"An error occurred while deleting a season with id = $id: $ex")
-          senderToReturn ! SeasonInternalServerError
+          senderToReturn ! InternalServerError
       }
   }
 
@@ -223,22 +225,9 @@ object SeasonService {
   def props(seasonRepository: SeasonRepository)(implicit ec: ExecutionContext, timeout: Timeout): Props =
     Props(new SeasonService(seasonRepository))
 
-  case object GetAllSeasons
-  case class GetSeasonById(id: Int)
-  case class GetSeasonByName(name: String)
-  case class AddSeason(seasonDto: SeasonApiDto)
-  case class AddSeasons(seasonDtoList: List[SeasonApiDto])
-  case class UpdateSeason(seasonDto: SeasonApiDto)
-  case class RemoveSeason(id: Int)
+  case class AddAllSeasons(seasonDtoList: List[SeasonApiDto])
 
-  case class FoundSeasons(seasons: List[SeasonApiDto])
-  case class FoundSeason(maybeSeason: Option[SeasonApiDto])
+  case class AllFoundSeasons(seasons: List[SeasonApiDto])
   case class SeasonValidationErrors(errors: List[SeasonError])
-  case class SeasonAdded(season: SeasonApiDto)
-  case class SeasonsAdded(seasons: List[SeasonApiDto], errors: List[SeasonError])
-  case object SeasonUpdated
-  case object SeasonNotUpdated
-  case object SeasonDeleted
-  case object SeasonNotDeleted
-  case object SeasonInternalServerError
+  case class AllSeasonsAdded(seasons: List[SeasonApiDto], errors: List[SeasonError])
 }
