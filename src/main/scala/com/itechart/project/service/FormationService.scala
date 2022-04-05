@@ -4,6 +4,8 @@ import akka.actor.{Actor, ActorLogging, Props}
 import com.itechart.project.domain.formation.{Formation, FormationId}
 import com.itechart.project.dto.formation.FormationApiDto
 import com.itechart.project.repository.FormationRepository
+import com.itechart.project.service.CommonServiceMessages.Requests._
+import com.itechart.project.service.CommonServiceMessages.Responses._
 import com.itechart.project.service.domain_errors.FormationErrors.FormationError
 import com.itechart.project.service.domain_errors.FormationErrors.FormationError.InvalidFormationName
 import com.itechart.project.utils.FormationNameConversion
@@ -17,33 +19,33 @@ class FormationService(formationRepository: FormationRepository)(implicit ec: Ex
   import FormationService._
 
   override def receive: Receive = {
-    case GetAllFormations =>
+    case GetAllEntities =>
       val senderToReturn = sender()
       log.info("Getting all formations from database")
       val formationsFuture = formationRepository.findAll
       formationsFuture.onComplete {
         case Success(formations) =>
           log.info(s"Got ${formations.size} formations out of database")
-          senderToReturn ! FoundFormations(formations.map(domainFormationToDtoFormation))
+          senderToReturn ! AllFoundFormations(formations.map(domainFormationToDtoFormation))
         case Failure(ex) =>
           log.error(s"An error occurred while extracting all formations out of database: $ex")
-          senderToReturn ! FormationInternalServerError
+          senderToReturn ! InternalServerError
       }
 
-    case GetFormationById(id) =>
+    case GetEntityByT(id: Int) =>
       val senderToReturn = sender()
       log.info(s"Getting formation with id = $id")
       val formationFuture = formationRepository.findById(FormationId(id))
       formationFuture.onComplete {
         case Success(maybeFormation) =>
           log.info(s"Formation with id = $id ${if (maybeFormation.isEmpty) "not "}found")
-          senderToReturn ! FoundFormation(maybeFormation.map(domainFormationToDtoFormation))
+          senderToReturn ! OneFoundEntity(maybeFormation.map(domainFormationToDtoFormation))
         case Failure(ex) =>
           log.error(s"An error occurred while extracting a formation with id = $id: $ex")
-          senderToReturn ! FormationInternalServerError
+          senderToReturn ! InternalServerError
       }
 
-    case GetFormationByName(name) =>
+    case GetEntityByT(name: String) =>
       val senderToReturn = sender()
       log.info(s"Getting formation with name = $name")
       val validatedNameEither = Try(FormationNameConversion.prettyStringToFormationName(name)).toEither.left
@@ -58,10 +60,10 @@ class FormationService(formationRepository: FormationRepository)(implicit ec: Ex
           formationFuture.onComplete {
             case Success(maybeFormation) =>
               log.info(s"Formation with name = $name ${if (maybeFormation.isEmpty) "not " else ""}found")
-              senderToReturn ! FoundFormation(maybeFormation.map(domainFormationToDtoFormation))
+              senderToReturn ! OneFoundEntity(maybeFormation.map(domainFormationToDtoFormation))
             case Failure(ex) =>
               log.error(s"An error occurred while extracting a formation with name = $name: $ex")
-              senderToReturn ! FormationInternalServerError
+              senderToReturn ! InternalServerError
           }
       }
   }
@@ -74,12 +76,6 @@ object FormationService {
   def props(formationRepository: FormationRepository)(implicit ec: ExecutionContext): Props =
     Props(new FormationService(formationRepository))
 
-  case object GetAllFormations
-  case class GetFormationById(id: Int)
-  case class GetFormationByName(name: String)
-
-  case class FoundFormations(formations: List[FormationApiDto])
-  case class FoundFormation(maybeFormation: Option[FormationApiDto])
+  case class AllFoundFormations(formations: List[FormationApiDto])
   case class FormationValidationErrors(errors: List[FormationError])
-  case object FormationInternalServerError
 }

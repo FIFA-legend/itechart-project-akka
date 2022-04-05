@@ -8,6 +8,9 @@ import akka.http.scaladsl.server.Route
 import akka.pattern.ask
 import akka.util.Timeout
 import com.itechart.project.dto.JsonConverters.FormationJsonProtocol
+import com.itechart.project.dto.formation.FormationApiDto
+import com.itechart.project.service.CommonServiceMessages.Requests._
+import com.itechart.project.service.CommonServiceMessages.Responses._
 
 import scala.concurrent.ExecutionContext
 
@@ -21,34 +24,34 @@ class FormationRouter(formationService: ActorRef)(implicit timeout: Timeout, ec:
     pathPrefix("api" / "formations") {
       get {
         (path(IntNumber) | parameter("id".as[Int])) { id =>
-          val responseFuture = (formationService ? GetFormationById(id)).map {
-            case FoundFormation(None) =>
+          val responseFuture = (formationService ? GetEntityByT(id)).map {
+            case OneFoundEntity(None) =>
               HttpResponse(status = StatusCodes.NotFound)
-            case FoundFormation(Some(formation)) =>
+            case OneFoundEntity(Some(formation: FormationApiDto)) =>
               Utils.responseBadRequestWithBody(formation)
-            case FormationInternalServerError =>
+            case InternalServerError =>
               HttpResponse(status = StatusCodes.InternalServerError)
           }
           complete(responseFuture)
         } ~
           parameter("name") { name =>
-            val responseFuture = (formationService ? GetFormationByName(name)).map {
-              case FoundFormation(None) =>
+            val responseFuture = (formationService ? GetEntityByT(name)).map {
+              case OneFoundEntity(None) =>
                 HttpResponse(status = StatusCodes.NotFound)
-              case FoundFormation(Some(formation)) =>
+              case OneFoundEntity(Some(formation: FormationApiDto)) =>
                 Utils.responseOkWithBody(formation)
               case FormationValidationErrors(errors) =>
                 Utils.responseBadRequestWithBody(errors.map(_.message))
-              case FormationInternalServerError =>
+              case InternalServerError =>
                 HttpResponse(status = StatusCodes.InternalServerError)
             }
             complete(responseFuture)
           } ~
           pathEndOrSingleSlash {
-            val responseFuture = (formationService ? GetAllFormations).map {
-              case FoundFormations(formations) =>
+            val responseFuture = (formationService ? GetAllEntities).map {
+              case AllFoundFormations(formations) =>
                 Utils.responseOkWithBody(formations)
-              case FormationInternalServerError =>
+              case InternalServerError =>
                 HttpResponse(status = StatusCodes.InternalServerError)
             }
             complete(responseFuture)
