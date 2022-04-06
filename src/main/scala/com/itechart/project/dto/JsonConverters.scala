@@ -5,6 +5,7 @@ import com.itechart.project.dto.formation.FormationApiDto
 import com.itechart.project.dto.league.LeagueApiDto
 import com.itechart.project.dto.season.SeasonApiDto
 import com.itechart.project.dto.stage.StageApiDto
+import com.itechart.project.dto.team.TeamApiDto
 import spray.json._
 
 import java.time.LocalDate
@@ -99,6 +100,33 @@ object JsonConverters {
         "stage_id" -> JsNumber(stage.id),
         "name"     -> JsString(stage.name)
       )
+    }
+  }
+
+  trait TeamJsonProtocol extends DefaultJsonProtocol {
+    implicit object TeamJsonFormat extends RootJsonFormat[TeamApiDto] {
+      override def read(value: JsValue): TeamApiDto = {
+        value.asJsObject.getFields("team_id", "name", "short_code", "logo", "country_id") match {
+          case Seq(JsNumber(id), JsString(name), JsString(shortCode), JsString(logo), JsNumber(countryId)) =>
+            TeamApiDto(id.toInt, name, shortCode, Option(logo), countryId.toInt)
+          case Seq(JsNumber(id), JsString(name), JsString(shortCode), JsNull, JsNumber(countryId)) =>
+            TeamApiDto(id.toInt, name, shortCode, None, countryId.toInt)
+          case _ => throw DeserializationException("Team expected")
+        }
+      }
+
+      override def write(team: TeamApiDto): JsValue = JsObject(
+        "team_id"    -> JsNumber(team.id),
+        "name"       -> JsString(team.name),
+        "short_code" -> JsString(team.shortCode),
+        "logo"       -> logoToJsValue(team.logo),
+        "country_id" -> JsNumber(team.countryId)
+      )
+
+      private def logoToJsValue(logo: Option[String]): JsValue = logo match {
+        case None        => JsNull
+        case Some(value) => JsString(value)
+      }
     }
   }
 

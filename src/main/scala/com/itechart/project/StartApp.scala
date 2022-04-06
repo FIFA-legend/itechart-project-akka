@@ -6,15 +6,9 @@ import akka.http.scaladsl.server.Directives._
 import akka.util.Timeout
 import com.itechart.project.configuration.ConfigurationTypes.DatabaseConfiguration
 import com.itechart.project.configuration.DatabaseSettings
-import com.itechart.project.repository.{
-  CountryRepository,
-  FormationRepository,
-  LeagueRepository,
-  SeasonRepository,
-  StageRepository
-}
-import com.itechart.project.route.{CountryRouter, FormationRouter, LeagueRouter, SeasonRouter, StageRouter}
-import com.itechart.project.service.{CountryService, FormationService, LeagueService, SeasonService, StageService}
+import com.itechart.project.repository._
+import com.itechart.project.route._
+import com.itechart.project.service._
 import io.circe.config.parser
 
 import scala.concurrent.ExecutionContext
@@ -43,25 +37,28 @@ object StartApp extends App {
       val leagueRepository    = LeagueRepository.of(db)
       val seasonRepository    = SeasonRepository.of(db)
       val stageRepository     = StageRepository.of(db)
+      val teamRepository      = TeamRepository.of(db)
 
       val countryService   = system.actorOf(CountryService.props(countryRepository), "countryService")
       val formationService = system.actorOf(FormationService.props(formationRepository), "formationService")
       val leagueService    = system.actorOf(LeagueService.props(leagueRepository, countryRepository), "leagueService")
       val seasonService    = system.actorOf(SeasonService.props(seasonRepository), "seasonService")
       val stageService     = system.actorOf(StageService.props(stageRepository), "stageService")
+      val teamService      = system.actorOf(TeamService.props(teamRepository, countryRepository), "teamService")
 
       val countryRouter   = new CountryRouter(countryService)
       val formationRouter = new FormationRouter(formationService)
       val leagueRouter    = new LeagueRouter(leagueService)
       val seasonRouter    = new SeasonRouter(seasonService)
       val stageRouter     = new StageRouter(stageService)
+      val teamRouter      = new TeamRouter(teamService)
 
       Http()
         .newServerAt("localhost", 8080)
         .bind(
           countryRouter.countryRoutes ~ formationRouter.formationRoutes ~
             leagueRouter.leagueRoutes ~ seasonRouter.seasonRoutes ~
-            stageRouter.stageRoutes
+            stageRouter.stageRoutes ~ teamRouter.teamRoutes
         )
   }
 
