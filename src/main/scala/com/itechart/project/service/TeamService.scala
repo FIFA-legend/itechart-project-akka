@@ -120,8 +120,8 @@ class TeamService(
     case AddAllTeams(teamDtoList) =>
       val senderToReturn = sender()
       log.info(s"Adding teams $teamDtoList")
-      val addedLeagues = Future.traverse(teamDtoList.map(self ? AddOneEntity(_)))(identity)
-      addedLeagues.onComplete {
+      val addedTeams = Future.traverse(teamDtoList.map(self ? AddOneEntity(_)))(identity)
+      addedTeams.onComplete {
         case Success(list) =>
           val teams: List[TeamApiDto] = list.flatMap {
             case OneEntityAdded(team: TeamApiDto) => List(team)
@@ -142,8 +142,8 @@ class TeamService(
     case UpdateEntity(teamDto: TeamApiDto) =>
       val senderToReturn = sender()
       log.info(s"Updating a team = $teamDto")
-      val validatedLeague = validateTeamDto(teamDto)
-      validatedLeague match {
+      val validatedTeam = validateTeamDto(teamDto)
+      validatedTeam match {
         case Left(errors) =>
           logErrorsAndSend(senderToReturn, teamDto, errors)
         case Right(team) =>

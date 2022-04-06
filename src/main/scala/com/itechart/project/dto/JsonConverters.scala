@@ -3,6 +3,7 @@ package com.itechart.project.dto
 import com.itechart.project.dto.country.CountryApiDto
 import com.itechart.project.dto.formation.FormationApiDto
 import com.itechart.project.dto.league.LeagueApiDto
+import com.itechart.project.dto.referee.RefereeApiDto
 import com.itechart.project.dto.season.SeasonApiDto
 import com.itechart.project.dto.stage.StageApiDto
 import com.itechart.project.dto.team.TeamApiDto
@@ -66,6 +67,28 @@ object JsonConverters {
     }
   }
 
+  trait RefereeJsonProtocol extends DefaultJsonProtocol {
+    implicit object RefereeJsonFormat extends RootJsonFormat[RefereeApiDto] {
+      override def read(value: JsValue): RefereeApiDto = {
+        value.asJsObject.getFields("referee_id", "first_name", "last_name", "img", "country_id") match {
+          case Seq(JsNumber(id), JsString(firstName), JsString(lastName), JsString(image), JsNumber(countryId)) =>
+            RefereeApiDto(id.toInt, firstName, lastName, Option(image), countryId.toInt)
+          case Seq(JsNumber(id), JsString(firstName), JsString(lastName), JsNull, JsNumber(countryId)) =>
+            RefereeApiDto(id.toInt, firstName, lastName, None, countryId.toInt)
+          case _ => throw DeserializationException("Referee expected")
+        }
+      }
+
+      override def write(referee: RefereeApiDto): JsValue = JsObject(
+        "referee_id" -> JsNumber(referee.id),
+        "first_name" -> JsString(referee.firstName),
+        "last_name"  -> JsString(referee.lastName),
+        "img"        -> optionStringToJsValue(referee.image),
+        "country_id" -> JsNumber(referee.countryId)
+      )
+    }
+  }
+
   trait SeasonJsonProtocol extends DefaultJsonProtocol {
     implicit object SeasonJsonFormat extends RootJsonFormat[SeasonApiDto] {
       override def read(value: JsValue): SeasonApiDto = {
@@ -119,15 +142,15 @@ object JsonConverters {
         "team_id"    -> JsNumber(team.id),
         "name"       -> JsString(team.name),
         "short_code" -> JsString(team.shortCode),
-        "logo"       -> logoToJsValue(team.logo),
+        "logo"       -> optionStringToJsValue(team.logo),
         "country_id" -> JsNumber(team.countryId)
       )
-
-      private def logoToJsValue(logo: Option[String]): JsValue = logo match {
-        case None        => JsNull
-        case Some(value) => JsString(value)
-      }
     }
+  }
+
+  private def optionStringToJsValue(option: Option[String]): JsValue = option match {
+    case None         => JsNull
+    case Some(string) => JsString(string)
   }
 
 }

@@ -1,6 +1,6 @@
 package com.itechart.project.repository.slick_impl
 
-import com.itechart.project.domain.country.Country
+import com.itechart.project.domain.country.CountryId
 import com.itechart.project.domain.referee.{Referee, RefereeId}
 import com.itechart.project.repository.RefereeRepository
 import com.itechart.project.repository.slick_impl.Implicits._
@@ -23,8 +23,8 @@ class SlickRefereeRepository(db: MySQLProfile.backend.Database)(implicit ec: Exe
     db.run[Seq[Referee]](refereeByIdQuery.result).map(_.headOption)
   }
 
-  override def findByCountry(country: Country): Future[List[Referee]] = {
-    val refereesByCountryQuery = refereeTable.filter(_.countryId === country.id)
+  override def findByCountry(countryId: CountryId): Future[List[Referee]] = {
+    val refereesByCountryQuery = refereeTable.filter(_.countryId === countryId)
     db.run[Seq[Referee]](refereesByCountryQuery.result).map(_.toList)
   }
 
