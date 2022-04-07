@@ -1,7 +1,7 @@
 package com.itechart.project.repository.slick_impl
 
-import com.itechart.project.domain.country.Country
-import com.itechart.project.domain.venue.{Venue, VenueId, VenueName}
+import com.itechart.project.domain.country.CountryId
+import com.itechart.project.domain.venue.{Venue, VenueCity, VenueId, VenueName}
 import com.itechart.project.repository.VenueRepository
 import com.itechart.project.repository.slick_impl.Implicits._
 import com.itechart.project.repository.slick_impl.Tables._
@@ -27,8 +27,13 @@ class SlickVenueRepository(db: MySQLProfile.backend.Database)(implicit ec: Execu
     db.run[Seq[Venue]](venueByNameQuery.result).map(_.headOption)
   }
 
-  override def findByCountry(country: Country): Future[List[Venue]] = {
-    val venuesByCountryQuery = venueTable.filter(_.countryId === country.id)
+  override def findByCity(city: VenueCity): Future[List[Venue]] = {
+    val venuesByCityQuery = venueTable.filter(_.city === city)
+    db.run[Seq[Venue]](venuesByCityQuery.result).map(_.toList)
+  }
+
+  override def findByCountry(countryId: CountryId): Future[List[Venue]] = {
+    val venuesByCountryQuery = venueTable.filter(_.countryId === countryId)
     db.run[Seq[Venue]](venuesByCountryQuery.result).map(_.toList)
   }
 

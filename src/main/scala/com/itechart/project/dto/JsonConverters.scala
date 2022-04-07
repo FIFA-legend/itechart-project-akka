@@ -7,6 +7,7 @@ import com.itechart.project.dto.referee.RefereeApiDto
 import com.itechart.project.dto.season.SeasonApiDto
 import com.itechart.project.dto.stage.StageApiDto
 import com.itechart.project.dto.team.TeamApiDto
+import com.itechart.project.dto.venue.VenueApiDto
 import spray.json._
 
 import java.time.LocalDate
@@ -140,6 +141,26 @@ object JsonConverters {
         "short_code" -> JsString(team.shortCode),
         "logo"       -> optionStringToJsValue(team.logo),
         "country_id" -> JsNumber(team.countryId)
+      )
+    }
+  }
+
+  trait VenueJsonProtocol extends DefaultJsonProtocol {
+    implicit object VenueJsonFormat extends RootJsonFormat[VenueApiDto] {
+      override def read(value: JsValue): VenueApiDto = {
+        value.asJsObject.getFields("venue_id", "name", "capacity", "city", "country_id") match {
+          case Seq(JsNumber(id), JsString(name), JsNumber(capacity), JsString(city), JsNumber(countryId)) =>
+            VenueApiDto(id.toInt, name, capacity.toInt, city, countryId.toInt)
+          case _ => throw DeserializationException("Venue expected")
+        }
+      }
+
+      override def write(venue: VenueApiDto): JsValue = JsObject(
+        "venue_id"   -> JsNumber(venue.id),
+        "name"       -> JsString(venue.name),
+        "capacity"   -> JsNumber(venue.capacity),
+        "city"       -> JsString(venue.city),
+        "country_id" -> JsNumber(venue.countryId)
       )
     }
   }

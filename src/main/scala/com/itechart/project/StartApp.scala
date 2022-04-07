@@ -39,6 +39,7 @@ object StartApp extends App {
       val seasonRepository    = SeasonRepository.of(db)
       val stageRepository     = StageRepository.of(db)
       val teamRepository      = TeamRepository.of(db)
+      val venueRepository     = VenueRepository.of(db)
 
       val countryService   = system.actorOf(CountryService.props(countryRepository), "countryService")
       val formationService = system.actorOf(FormationService.props(formationRepository), "formationService")
@@ -47,6 +48,7 @@ object StartApp extends App {
       val seasonService    = system.actorOf(SeasonService.props(seasonRepository), "seasonService")
       val stageService     = system.actorOf(StageService.props(stageRepository), "stageService")
       val teamService      = system.actorOf(TeamService.props(teamRepository, countryRepository), "teamService")
+      val venueService     = system.actorOf(VenueService.props(venueRepository, countryRepository), "venueRepository")
 
       val countryRouter   = new CountryRouter(countryService)
       val formationRouter = new FormationRouter(formationService)
@@ -55,13 +57,14 @@ object StartApp extends App {
       val seasonRouter    = new SeasonRouter(seasonService)
       val stageRouter     = new StageRouter(stageService)
       val teamRouter      = new TeamRouter(teamService)
+      val venueRouter     = new VenueRouter(venueService)
 
       Http()
         .newServerAt("localhost", 8080)
         .bind(
           countryRouter.countryRoutes ~ formationRouter.formationRoutes ~
             leagueRouter.leagueRoutes ~ refereeRouter.refereeRoutes ~ seasonRouter.seasonRoutes ~
-            stageRouter.stageRoutes ~ teamRouter.teamRoutes
+            stageRouter.stageRoutes ~ teamRouter.teamRoutes ~ venueRouter.venueRoutes
         )
   }
 
