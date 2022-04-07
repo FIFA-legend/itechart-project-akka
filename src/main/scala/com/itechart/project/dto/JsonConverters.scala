@@ -71,10 +71,8 @@ object JsonConverters {
     implicit object RefereeJsonFormat extends RootJsonFormat[RefereeApiDto] {
       override def read(value: JsValue): RefereeApiDto = {
         value.asJsObject.getFields("referee_id", "first_name", "last_name", "img", "country_id") match {
-          case Seq(JsNumber(id), JsString(firstName), JsString(lastName), JsString(image), JsNumber(countryId)) =>
-            RefereeApiDto(id.toInt, firstName, lastName, Option(image), countryId.toInt)
-          case Seq(JsNumber(id), JsString(firstName), JsString(lastName), JsNull, JsNumber(countryId)) =>
-            RefereeApiDto(id.toInt, firstName, lastName, None, countryId.toInt)
+          case Seq(JsNumber(id), JsString(firstName), JsString(lastName), image: JsValue, JsNumber(countryId)) =>
+            RefereeApiDto(id.toInt, firstName, lastName, jsValueToOptionString(image), countryId.toInt)
           case _ => throw DeserializationException("Referee expected")
         }
       }
@@ -130,10 +128,8 @@ object JsonConverters {
     implicit object TeamJsonFormat extends RootJsonFormat[TeamApiDto] {
       override def read(value: JsValue): TeamApiDto = {
         value.asJsObject.getFields("team_id", "name", "short_code", "logo", "country_id") match {
-          case Seq(JsNumber(id), JsString(name), JsString(shortCode), JsString(logo), JsNumber(countryId)) =>
-            TeamApiDto(id.toInt, name, shortCode, Option(logo), countryId.toInt)
-          case Seq(JsNumber(id), JsString(name), JsString(shortCode), JsNull, JsNumber(countryId)) =>
-            TeamApiDto(id.toInt, name, shortCode, None, countryId.toInt)
+          case Seq(JsNumber(id), JsString(name), JsString(shortCode), logo: JsValue, JsNumber(countryId)) =>
+            TeamApiDto(id.toInt, name, shortCode, jsValueToOptionString(logo), countryId.toInt)
           case _ => throw DeserializationException("Team expected")
         }
       }
@@ -146,6 +142,11 @@ object JsonConverters {
         "country_id" -> JsNumber(team.countryId)
       )
     }
+  }
+
+  private def jsValueToOptionString(jsValue: JsValue): Option[String] = jsValue match {
+    case JsString(value) => Option(value)
+    case _               => None
   }
 
   private def optionStringToJsValue(option: Option[String]): JsValue = option match {
