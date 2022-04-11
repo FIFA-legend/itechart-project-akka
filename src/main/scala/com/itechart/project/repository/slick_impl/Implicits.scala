@@ -1,7 +1,7 @@
 package com.itechart.project.repository.slick_impl
 
 import com.itechart.project.domain.country.{Continent, CountryCode, CountryId, CountryName}
-import com.itechart.project.domain.football_match.MatchId
+import com.itechart.project.domain.football_match.{MatchId, Status}
 import com.itechart.project.domain.formation.{FormationId, FormationName}
 import com.itechart.project.domain.league.LeagueId
 import com.itechart.project.domain.match_stats.MatchStatsId
@@ -148,4 +148,7 @@ object Implicits {
 
   implicit val matchIdTypeMapper: JdbcType[MatchId] with BaseTypedType[MatchId] =
     MappedColumnType.base[MatchId, Long](_.value, MatchId)
+  implicit val matchStatusMapper: JdbcType[Status] with BaseTypedType[Status] =
+    MappedColumnType.base[Status, String](_.toString, Status.withName)
+
 }

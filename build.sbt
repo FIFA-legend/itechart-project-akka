@@ -26,6 +26,7 @@ val akkaHttpVersion        = "10.2.8"
 val akkaPersistenceVersion = "3.5.3"
 val circeVersion           = "0.14.1"
 val circeConfigVersion     = "0.8.0"
+val enumeratumVersion      = "1.7.0"
 val scalaTestVersion       = "3.2.9"
 val mySqlVersion           = "8.0.28"
 val jwtVersion             = "5.0.0"
@@ -60,6 +61,8 @@ libraryDependencies ++= Seq(
   // Circe
   "io.circe" %% "circe-generic" % circeVersion,
   "io.circe" %% "circe-config"  % circeConfigVersion,
+  // enumeratum
+  "com.beachape" %% "enumeratum" % enumeratumVersion,
 )
 
 addCompilerPlugin(
