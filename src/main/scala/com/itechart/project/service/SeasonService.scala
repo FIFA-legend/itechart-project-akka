@@ -1,6 +1,6 @@
 package com.itechart.project.service
 
-import akka.actor.{Actor, ActorLogging, Props}
+import akka.actor.{Actor, ActorLogging, ActorRef, Props}
 import akka.pattern.ask
 import akka.util.Timeout
 import com.itechart.project.domain.season.{Season, SeasonId}
@@ -48,7 +48,7 @@ class SeasonService(seasonRepository: SeasonRepository)(implicit ec: ExecutionCo
           log.info(s"Season with id = $id ${if (maybeSeason.isEmpty) "not "}found")
           senderToReturn ! OneFoundEntity(maybeSeason.map(domainSeasonToDtoSeason))
         case Failure(ex) =>
-          log.error(s"An error occurred while extracting a league with id = $id: $ex")
+          log.error(s"An error occurred while extracting a season with id = $id: $ex")
           senderToReturn ! InternalServerError
       }
 
@@ -80,8 +80,7 @@ class SeasonService(seasonRepository: SeasonRepository)(implicit ec: ExecutionCo
       val validatedSeason = validateSeasonDto(seasonDto)
       validatedSeason match {
         case Left(errors) =>
-          log.info(s"Validation of season = $seasonDto failed because of: ${errors.mkString("[", ", ", "]")}")
-          senderToReturn ! SeasonValidationErrors(errors)
+          logErrorsAndSend(senderToReturn, seasonDto, errors)
         case Right(season) =>
           val seasonIdOrErrors = for {
             errors   <- validateSeasonDuplicatesOnCreate(season)
@@ -129,8 +128,7 @@ class SeasonService(seasonRepository: SeasonRepository)(implicit ec: ExecutionCo
       val validatedSeason = validateSeasonDto(seasonDto)
       validatedSeason match {
         case Left(errors) =>
-          log.info(s"Validation of season = $seasonDto failed because of: ${errors.mkString("[", ", ", "]")}")
-          senderToReturn ! SeasonValidationErrors(errors)
+          logErrorsAndSend(senderToReturn, seasonDto, errors)
         case Right(season) =>
           val rowsUpdatedOrErrors = for {
             errors      <- validateSeasonDuplicatesOnUpdate(season)
@@ -167,6 +165,11 @@ class SeasonService(seasonRepository: SeasonRepository)(implicit ec: ExecutionCo
           log.error(s"An error occurred while deleting a season with id = $id: $ex")
           senderToReturn ! InternalServerError
       }
+  }
+
+  private def logErrorsAndSend(sender: ActorRef, seasonDto: SeasonApiDto, errors: List[SeasonError]): Unit = {
+    log.info(s"Validation of season = $seasonDto failed because of: ${errors.mkString("[", ", ", "]")}")
+    sender ! SeasonValidationErrors(errors)
   }
 
   private def validateSeasonDuplicatesOnCreate(season: Season): Future[List[SeasonError]] = for {

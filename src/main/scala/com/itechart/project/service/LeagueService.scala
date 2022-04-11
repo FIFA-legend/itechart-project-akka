@@ -1,6 +1,6 @@
 package com.itechart.project.service
 
-import akka.actor.{Actor, ActorLogging, Props}
+import akka.actor.{Actor, ActorLogging, ActorRef, Props}
 import akka.pattern.ask
 import akka.util.Timeout
 import com.itechart.project.domain.country.CountryId
@@ -95,8 +95,7 @@ class LeagueService(
       val validatedLeague = validateLeagueDto(leagueDto)
       validatedLeague match {
         case Left(errors) =>
-          log.info(s"Validation of league = $leagueDto failed because of: ${errors.mkString("[", ", ", "]")}")
-          senderToReturn ! LeagueValidationErrors(errors)
+          logErrorsAndSend(senderToReturn, leagueDto, errors)
         case Right(league) =>
           val leagueIdOrErrors = for {
             errors   <- validateLeagueDuplicatesOnCreate(league)
@@ -144,8 +143,7 @@ class LeagueService(
       val validatedLeague = validateLeagueDto(leagueDto)
       validatedLeague match {
         case Left(errors) =>
-          log.info(s"Validation of league = $leagueDto failed because of: ${errors.mkString("[", ", ", "]")}")
-          senderToReturn ! LeagueValidationErrors(errors)
+          logErrorsAndSend(senderToReturn, leagueDto, errors)
         case Right(league) =>
           val rowsUpdatedOrErrors = for {
             errors      <- validateLeagueDuplicatesOnUpdate(league)
@@ -182,6 +180,11 @@ class LeagueService(
           log.error(s"An error occurred while deleting a league with id = $id: $ex")
           senderToReturn ! InternalServerError
       }
+  }
+
+  private def logErrorsAndSend(sender: ActorRef, leagueDto: LeagueApiDto, errors: List[LeagueError]): Unit = {
+    log.info(s"Validation of league = $leagueDto failed because of: ${errors.mkString("[", ", ", "]")}")
+    sender ! LeagueValidationErrors(errors)
   }
 
   private def validateLeagueDuplicatesOnCreate(league: League): Future[List[LeagueError]] = for {

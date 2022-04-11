@@ -1,6 +1,6 @@
 package com.itechart.project.service
 
-import akka.actor.{Actor, ActorLogging, Props}
+import akka.actor.{Actor, ActorLogging, ActorRef, Props}
 import akka.pattern.ask
 import akka.util.Timeout
 import com.itechart.project.domain.country.{Continent, Country, CountryId}
@@ -100,8 +100,7 @@ class CountryService(countryRepository: CountryRepository)(implicit ec: Executio
       val validatedCountry = validateCountryDto(countryDto)
       validatedCountry match {
         case Left(errors) =>
-          log.info(s"Validation of country = $countryDto failed because of: ${errors.mkString("[", ", ", "]")}")
-          senderToReturn ! CountryValidationErrors(errors)
+          logErrorsAndSend(senderToReturn, countryDto, errors)
         case Right(country) =>
           val countryIdOrErrors = for {
             errors    <- validateCountryDuplicatesOnCreate(country)
@@ -149,8 +148,7 @@ class CountryService(countryRepository: CountryRepository)(implicit ec: Executio
       val validatedCountry = validateCountryDto(countryDto)
       validatedCountry match {
         case Left(errors) =>
-          log.info(s"Validation of country = $countryDto failed because of: ${errors.mkString("[", ", ", "]")}")
-          senderToReturn ! CountryValidationErrors(errors)
+          logErrorsAndSend(senderToReturn, countryDto, errors)
         case Right(country) =>
           val rowsUpdatedOrErrors = for {
             errors      <- validateCountryDuplicatesOnUpdate(country)
@@ -187,6 +185,11 @@ class CountryService(countryRepository: CountryRepository)(implicit ec: Executio
           log.error(s"An error occurred while deleting a country with id = $id: $ex")
           senderToReturn ! InternalServerError
       }
+  }
+
+  private def logErrorsAndSend(sender: ActorRef, countryDto: CountryApiDto, errors: List[CountryError]): Unit = {
+    log.info(s"Validation of country = $countryDto failed because of: ${errors.mkString("[", ", ", "]")}")
+    sender ! CountryValidationErrors(errors)
   }
 
   private def validateCountryDuplicatesOnCreate(country: Country): Future[List[CountryError]] = for {

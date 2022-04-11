@@ -1,6 +1,6 @@
 package com.itechart.project.service
 
-import akka.actor.{Actor, ActorLogging, Props}
+import akka.actor.{Actor, ActorLogging, ActorRef, Props}
 import akka.util.Timeout
 import akka.pattern.ask
 import com.itechart.project.domain.stage.{Stage, StageId}
@@ -76,8 +76,7 @@ class StageService(stageRepository: StageRepository)(implicit ec: ExecutionConte
       val validatedStage = validateStageDto(stageDto)
       validatedStage match {
         case Left(errors) =>
-          log.info(s"Validation of stage = $stageDto failed because of: ${errors.mkString("[", ", ", "]")}")
-          senderToReturn ! StageValidationErrors(errors)
+          logErrorsAndSend(senderToReturn, stageDto, errors)
         case Right(stage) =>
           val stageIdOrErrors = for {
             errors  <- validateStageDuplicates(stage)
@@ -125,8 +124,7 @@ class StageService(stageRepository: StageRepository)(implicit ec: ExecutionConte
       val validatedStage = validateStageDto(stageDto)
       validatedStage match {
         case Left(errors) =>
-          log.info(s"Validation of stage = $stageDto failed because of: ${errors.mkString("[", ", ", "]")}")
-          senderToReturn ! StageValidationErrors(errors)
+          logErrorsAndSend(senderToReturn, stageDto, errors)
         case Right(stage) =>
           val rowsUpdatedOrErrors = for {
             errors      <- validateStageDuplicates(stage)
@@ -163,6 +161,11 @@ class StageService(stageRepository: StageRepository)(implicit ec: ExecutionConte
           log.error(s"An error occurred while deleting a stage with id = $id: $ex")
           senderToReturn ! InternalServerError
       }
+  }
+
+  private def logErrorsAndSend(sender: ActorRef, stageDto: StageApiDto, errors: List[StageError]): Unit = {
+    log.info(s"Validation of stage = $stageDto failed because of: ${errors.mkString("[", ", ", "]")}")
+    sender ! StageValidationErrors(errors)
   }
 
   private def validateStageDuplicates(stage: Stage): Future[List[StageError]] = for {
