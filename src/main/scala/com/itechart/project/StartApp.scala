@@ -35,6 +35,7 @@ object StartApp extends App {
       val countryRepository   = CountryRepository.of(db)
       val formationRepository = FormationRepository.of(db)
       val leagueRepository    = LeagueRepository.of(db)
+      val playerRepository    = PlayerRepository.of(db)
       val refereeRepository   = RefereeRepository.of(db)
       val seasonRepository    = SeasonRepository.of(db)
       val stageRepository     = StageRepository.of(db)
@@ -44,6 +45,7 @@ object StartApp extends App {
       val countryService   = system.actorOf(CountryService.props(countryRepository), "countryService")
       val formationService = system.actorOf(FormationService.props(formationRepository), "formationService")
       val leagueService    = system.actorOf(LeagueService.props(leagueRepository, countryRepository), "leagueService")
+      val playerService    = system.actorOf(PlayerService.props(playerRepository, countryRepository), "playerService")
       val refereeService   = system.actorOf(RefereeService.props(refereeRepository, countryRepository), "refereeService")
       val seasonService    = system.actorOf(SeasonService.props(seasonRepository), "seasonService")
       val stageService     = system.actorOf(StageService.props(stageRepository), "stageService")
@@ -53,6 +55,7 @@ object StartApp extends App {
       val countryRouter   = new CountryRouter(countryService)
       val formationRouter = new FormationRouter(formationService)
       val leagueRouter    = new LeagueRouter(leagueService)
+      val playerRouter    = new PlayerRouter(playerService)
       val refereeRouter   = new RefereeRouter(refereeService)
       val seasonRouter    = new SeasonRouter(seasonService)
       val stageRouter     = new StageRouter(stageService)
@@ -62,8 +65,8 @@ object StartApp extends App {
       Http()
         .newServerAt("localhost", 8080)
         .bind(
-          countryRouter.countryRoutes ~ formationRouter.formationRoutes ~
-            leagueRouter.leagueRoutes ~ refereeRouter.refereeRoutes ~ seasonRouter.seasonRoutes ~
+          countryRouter.countryRoutes ~ formationRouter.formationRoutes ~ leagueRouter.leagueRoutes ~
+            playerRouter.playerRoutes ~ refereeRouter.refereeRoutes ~ seasonRouter.seasonRoutes ~
             stageRouter.stageRoutes ~ teamRouter.teamRoutes ~ venueRouter.venueRoutes
         )
   }

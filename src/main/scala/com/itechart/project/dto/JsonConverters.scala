@@ -3,6 +3,7 @@ package com.itechart.project.dto
 import com.itechart.project.dto.country.CountryApiDto
 import com.itechart.project.dto.formation.FormationApiDto
 import com.itechart.project.dto.league.LeagueApiDto
+import com.itechart.project.dto.player.PlayerApiDto
 import com.itechart.project.dto.referee.RefereeApiDto
 import com.itechart.project.dto.season.SeasonApiDto
 import com.itechart.project.dto.stage.StageApiDto
@@ -64,6 +65,60 @@ object JsonConverters {
         "league_id"  -> JsNumber(league.id),
         "country_id" -> JsNumber(league.countryId),
         "name"       -> JsString(league.name)
+      )
+    }
+  }
+
+  trait PlayerJsonProtocol extends DefaultJsonProtocol {
+    implicit object PlayerJsonFormat extends RootJsonFormat[PlayerApiDto] {
+      override def read(value: JsValue): PlayerApiDto = {
+        value.asJsObject.getFields(
+          "player_id",
+          "first_name",
+          "last_name",
+          "birthday",
+          "age",
+          "weight",
+          "height",
+          "img",
+          "country_id"
+        ) match {
+          case Seq(
+                JsNumber(id),
+                JsString(firstName),
+                JsString(lastName),
+                JsString(birthday),
+                JsNumber(age),
+                weight: JsValue,
+                height: JsValue,
+                image:  JsValue,
+                JsNumber(countryId)
+              ) =>
+            PlayerApiDto(
+              id.toInt,
+              firstName,
+              lastName,
+              LocalDate.parse(birthday),
+              age.toInt,
+              jsValueToOptionInt(weight),
+              jsValueToOptionInt(height),
+              jsValueToOptionString(image),
+              countryId.toInt
+            )
+          case _ => throw DeserializationException("Player expected")
+        }
+      }
+
+      override def write(player: PlayerApiDto): JsValue = JsObject(
+        "player_id"  -> JsNumber(player.id),
+        "first_name" -> JsString(player.firstName),
+        "last_name"  -> JsString(player.lastName),
+        "birthday"   -> JsString(player.birthday.toString),
+        "age"        -> JsNumber(player.age),
+        "weight"     -> optionIntToJsValue(player.weight),
+        "height"     -> optionIntToJsValue(player.height),
+        "img"        -> optionStringToJsValue(player.image),
+        "country_id" -> JsNumber(player.countryId)
       )
     }
   }
@@ -173,6 +228,16 @@ object JsonConverters {
   private def optionStringToJsValue(option: Option[String]): JsValue = option match {
     case None         => JsNull
     case Some(string) => JsString(string)
+  }
+
+  private def jsValueToOptionInt(jsValue: JsValue): Option[Int] = jsValue match {
+    case JsNumber(value) => Option(value.toInt)
+    case _               => None
+  }
+
+  private def optionIntToJsValue(option: Option[Int]): JsValue = option match {
+    case None      => JsNull
+    case Some(int) => JsNumber(int)
   }
 
 }
