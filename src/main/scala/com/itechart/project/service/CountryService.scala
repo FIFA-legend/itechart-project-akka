@@ -224,15 +224,10 @@ class CountryService(countryRepository: CountryRepository)(implicit ec: Executio
         countryDto.countryCode,
         InvalidCountryCode(countryDto.countryCode)
       )
-    val validatedContinentEither: Either[CountryError, Continent] = countryDto.continent match {
-      case "Africa"        => Right(Continent.Africa)
-      case "Asia"          => Right(Continent.Asia)
-      case "Europe"        => Right(Continent.Europe)
-      case "Oceania"       => Right(Continent.Oceania)
-      case "North America" => Right(Continent.NorthAmerica)
-      case "South America" => Right(Continent.SouthAmerica)
-      case _               => Left(InvalidCountryContinent(countryDto.continent))
-    }
+    val validatedContinentEither: Either[CountryError, Continent] = Continent
+      .withNameEither(countryDto.continent)
+      .left
+      .map(_ => InvalidCountryContinent(countryDto.continent))
 
     val nameErrorList = if (validatedNameEither.isLeft) List(InvalidCountryName(countryDto.name)) else List()
     val codeErrorList = if (validatedCodeEither.isLeft) List(InvalidCountryCode(countryDto.countryCode)) else List()

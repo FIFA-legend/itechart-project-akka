@@ -1,5 +1,6 @@
 package com.itechart.project.domain
 
+import enumeratum.{Enum, EnumEntry}
 import eu.timepit.refined.W
 import eu.timepit.refined.api.Refined
 import eu.timepit.refined.string.MatchesRegex
@@ -14,11 +15,13 @@ object user {
 
   type Email = String Refined MatchesRegex[W.`"^[A-Za-z0-9_]+@[A-Za-z0-9]+.[A-Za-z0-9]+$"`.T]
 
-  sealed trait Role
+  sealed trait Role extends EnumEntry
 
-  object Role {
+  object Role extends Enum[Role] {
     final case object Admin extends Role
     final case object User extends Role
+
+    override def values: IndexedSeq[Role] = findValues
   }
 
   final case class User(

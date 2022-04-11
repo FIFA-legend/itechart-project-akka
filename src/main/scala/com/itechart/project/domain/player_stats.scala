@@ -1,5 +1,6 @@
 package com.itechart.project.domain
 
+import enumeratum.{Enum, EnumEntry}
 import eu.timepit.refined.api.Refined
 import eu.timepit.refined.numeric.Interval.Closed
 import eu.timepit.refined.numeric.NonNegative
@@ -22,9 +23,9 @@ object player_stats {
 
   type Dribbling = Int Refined NonNegative
 
-  sealed trait Position
+  sealed trait Position extends EnumEntry
 
-  object Position {
+  object Position extends Enum[Position] {
     case object GK extends Position
     case object LWB extends Position
     case object LB extends Position
@@ -42,6 +43,8 @@ object player_stats {
     case object CF extends Position
     case object RF extends Position
     case object RW extends Position
+
+    override def values: IndexedSeq[Position] = findValues
   }
 
   final case class PlayerStats(

@@ -43,17 +43,7 @@ object Implicits {
   implicit val countryCodeTypeMapper: JdbcType[CountryCode] with BaseTypedType[CountryCode] =
     MappedColumnType.base[CountryCode, String](_.value, convertParameter(_, "by"))
   implicit val continentTypeMapper: JdbcType[Continent] with BaseTypedType[Continent] =
-    MappedColumnType.base[Continent, String](
-      _.toString,
-      {
-        case "Africa"       => Continent.Africa
-        case "Asia"         => Continent.Asia
-        case "Europe"       => Continent.Europe
-        case "Oceania"      => Continent.Oceania
-        case "NorthAmerica" => Continent.NorthAmerica
-        case "SouthAmerica" => Continent.SouthAmerica
-      }
-    )
+    MappedColumnType.base[Continent, String](_.toString, Continent.withName)
 
   implicit val formationIdTypeMapper: JdbcType[FormationId] with BaseTypedType[FormationId] =
     MappedColumnType.base[FormationId, Int](_.value, FormationId)
@@ -105,41 +95,14 @@ object Implicits {
   implicit val emailTypeMapper: JdbcType[Email] with BaseTypedType[Email] =
     MappedColumnType.base[Email, String](_.value, convertParameter(_, "default_email@gmail.com"))
   implicit val roleTypeMapper: JdbcType[Role] with BaseTypedType[Role] =
-    MappedColumnType.base[Role, String](
-      _.toString,
-      {
-        case "Admin" => Role.Admin
-        case "User"  => Role.User
-      }
-    )
+    MappedColumnType.base[Role, String](_.toString, Role.withName)
 
   implicit val playerStatsIdTypeMapper: JdbcType[PlayerStatsId] with BaseTypedType[PlayerStatsId] =
     MappedColumnType.base[PlayerStatsId, Long](_.value, PlayerStatsId)
   implicit val shirtNumberTypeMapper: JdbcType[ShirtNumber] with BaseTypedType[ShirtNumber] =
     MappedColumnType.base[ShirtNumber, Int](_.value, convertParameter(_, 1))
   implicit val positionNumberTypeMapper: JdbcType[Position] with BaseTypedType[Position] =
-    MappedColumnType.base[Position, String](
-      _.toString,
-      {
-        case "GK"  => Position.GK
-        case "LWB" => Position.LWB
-        case "LB"  => Position.LB
-        case "CB"  => Position.CB
-        case "RB"  => Position.RB
-        case "RWB" => Position.RWB
-        case "LM"  => Position.LM
-        case "CM"  => Position.CM
-        case "CDM" => Position.CDM
-        case "CAM" => Position.CAM
-        case "RM"  => Position.RM
-        case "LW"  => Position.LW
-        case "LF"  => Position.LF
-        case "ST"  => Position.ST
-        case "CF"  => Position.CF
-        case "RF"  => Position.RF
-        case "RW"  => Position.RW
-      }
-    )
+    MappedColumnType.base[Position, String](_.toString, Position.withName)
   implicit val minuteTypeMapper: JdbcType[Minute] with BaseTypedType[Minute] =
     MappedColumnType.base[Minute, Int](_.value, convertParameter(_, 1))
 
