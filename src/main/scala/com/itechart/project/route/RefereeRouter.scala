@@ -86,32 +86,12 @@ class RefereeRouter(refereeService: ActorRef)(implicit timeout: Timeout, ec: Exe
         } ~
         put {
           entity(as[RefereeApiDto]) { refereeDto =>
-            val responseFuture = (refereeService ? UpdateEntity(refereeDto)).map {
-              case UpdateFailed =>
-                HttpResponse(status = StatusCodes.NotFound)
-              case UpdateCompleted =>
-                Utils.responseOk()
-              case ValidationErrors(RefereeErrorWrapper(errors)) =>
-                Utils.responseBadRequestWithBody(errors.map(_.message))
-              case InternalServerError =>
-                HttpResponse(status = StatusCodes.InternalServerError)
-            }
-            complete(responseFuture)
+            complete(Utils.responseOnEntityUpdate(refereeService, refereeDto))
           }
         } ~
         delete {
           path(IntNumber) { id =>
-            val responseFuture = (refereeService ? RemoveEntity(id)).map {
-              case RemoveFailed =>
-                Utils.responseBadRequest()
-              case RemoveCompleted =>
-                Utils.responseOk()
-              case ValidationErrors(RefereeErrorWrapper(errors)) =>
-                Utils.responseBadRequestWithBody(errors.map(_.message))
-              case InternalServerError =>
-                HttpResponse(status = StatusCodes.InternalServerError)
-            }
-            complete(responseFuture)
+            complete(Utils.responseOnEntityDelete(refereeService, id))
           }
         }
     }

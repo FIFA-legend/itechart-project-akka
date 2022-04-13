@@ -110,32 +110,12 @@ class VenueRouter(venueService: ActorRef)(implicit timeout: Timeout, ec: Executi
         } ~
         put {
           entity(as[VenueApiDto]) { venueDto =>
-            val responseFuture = (venueService ? UpdateEntity(venueDto)).map {
-              case UpdateFailed =>
-                HttpResponse(status = StatusCodes.NotFound)
-              case UpdateCompleted =>
-                Utils.responseOk()
-              case ValidationErrors(VenueErrorWrapper(errors)) =>
-                Utils.responseBadRequestWithBody(errors.map(_.message))
-              case InternalServerError =>
-                HttpResponse(status = StatusCodes.InternalServerError)
-            }
-            complete(responseFuture)
+            complete(Utils.responseOnEntityUpdate(venueService, venueDto))
           }
         } ~
         delete {
           path(IntNumber) { id =>
-            val responseFuture = (venueService ? RemoveEntity(id)).map {
-              case RemoveFailed =>
-                Utils.responseBadRequest()
-              case RemoveCompleted =>
-                Utils.responseOk()
-              case ValidationErrors(VenueErrorWrapper(errors)) =>
-                Utils.responseBadRequestWithBody(errors.map(_.message))
-              case InternalServerError =>
-                HttpResponse(status = StatusCodes.InternalServerError)
-            }
-            complete(responseFuture)
+            complete(Utils.responseOnEntityDelete(venueService, id))
           }
         }
     }

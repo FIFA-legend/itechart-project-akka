@@ -97,32 +97,12 @@ class PlayerRouter(playerService: ActorRef)(implicit timeout: Timeout, ec: Execu
         } ~
         put {
           entity(as[PlayerApiDto]) { playerDto =>
-            val responseFuture = (playerService ? UpdateEntity(playerDto)).map {
-              case UpdateFailed =>
-                HttpResponse(status = StatusCodes.NotFound)
-              case UpdateCompleted =>
-                Utils.responseOk()
-              case ValidationErrors(PlayerErrorWrapper(errors)) =>
-                Utils.responseBadRequestWithBody(errors.map(_.message))
-              case InternalServerError =>
-                HttpResponse(status = StatusCodes.InternalServerError)
-            }
-            complete(responseFuture)
+            complete(Utils.responseOnEntityUpdate(playerService, playerDto))
           }
         } ~
         delete {
-          path(IntNumber) { id =>
-            val responseFuture = (playerService ? RemoveEntity(id)).map {
-              case RemoveFailed =>
-                Utils.responseBadRequest()
-              case RemoveCompleted =>
-                Utils.responseOk()
-              case ValidationErrors(PlayerErrorWrapper(errors)) =>
-                Utils.responseBadRequestWithBody(errors.map(_.message))
-              case InternalServerError =>
-                HttpResponse(status = StatusCodes.InternalServerError)
-            }
-            complete(responseFuture)
+          path(LongNumber) { id =>
+            complete(Utils.responseOnEntityDelete(playerService, id))
           }
         }
     }

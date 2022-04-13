@@ -53,32 +53,12 @@ class MatchStatsRouter(matchStatsService: ActorRef)(implicit timeout: Timeout, e
         } ~
         put {
           entity(as[MatchStatsApiDto]) { matchStatsDto =>
-            val responseFuture = (matchStatsService ? UpdateEntity(matchStatsDto)).map {
-              case UpdateFailed =>
-                HttpResponse(status = StatusCodes.NotFound)
-              case UpdateCompleted =>
-                Utils.responseOk()
-              case ValidationErrors(MatchStatsErrorWrapper(errors)) =>
-                Utils.responseBadRequestWithBody(errors.map(_.message))
-              case InternalServerError =>
-                HttpResponse(status = StatusCodes.InternalServerError)
-            }
-            complete(responseFuture)
+            complete(Utils.responseOnEntityUpdate(matchStatsService, matchStatsDto))
           }
         } ~
         delete {
-          path(IntNumber) { id =>
-            val responseFuture = (matchStatsService ? RemoveEntity(id)).map {
-              case RemoveFailed =>
-                Utils.responseBadRequest()
-              case RemoveCompleted =>
-                Utils.responseOk()
-              case ValidationErrors(MatchStatsErrorWrapper(errors)) =>
-                Utils.responseBadRequestWithBody(errors.map(_.message))
-              case InternalServerError =>
-                HttpResponse(status = StatusCodes.InternalServerError)
-            }
-            complete(responseFuture)
+          path(LongNumber) { id =>
+            complete(Utils.responseOnEntityDelete(matchStatsService, id))
           }
         }
     }

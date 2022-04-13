@@ -90,32 +90,12 @@ class SeasonRouter(seasonService: ActorRef)(implicit timeout: Timeout, ec: Execu
         } ~
         put {
           entity(as[SeasonApiDto]) { seasonDto =>
-            val responseFuture = (seasonService ? UpdateEntity(seasonDto)).map {
-              case UpdateFailed =>
-                HttpResponse(status = StatusCodes.NotFound)
-              case UpdateCompleted =>
-                Utils.responseOk()
-              case ValidationErrors(SeasonErrorWrapper(errors)) =>
-                Utils.responseBadRequestWithBody(errors.map(_.message))
-              case InternalServerError =>
-                HttpResponse(status = StatusCodes.InternalServerError)
-            }
-            complete(responseFuture)
+            complete(Utils.responseOnEntityUpdate(seasonService, seasonDto))
           }
         } ~
         delete {
           path(IntNumber) { id =>
-            val responseFuture = (seasonService ? RemoveEntity(id)).map {
-              case RemoveFailed =>
-                Utils.responseBadRequest()
-              case RemoveCompleted =>
-                Utils.responseOk()
-              case ValidationErrors(SeasonErrorWrapper(errors)) =>
-                Utils.responseBadRequestWithBody(errors.map(_.message))
-              case InternalServerError =>
-                HttpResponse(status = StatusCodes.InternalServerError)
-            }
-            complete(responseFuture)
+            complete(Utils.responseOnEntityDelete(seasonService, id))
           }
         }
     }

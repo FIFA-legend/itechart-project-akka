@@ -97,32 +97,12 @@ class TeamRouter(teamService: ActorRef)(implicit timeout: Timeout, ec: Execution
         } ~
         put {
           entity(as[TeamApiDto]) { teamDto =>
-            val responseFuture = (teamService ? UpdateEntity(teamDto)).map {
-              case UpdateFailed =>
-                HttpResponse(status = StatusCodes.NotFound)
-              case UpdateCompleted =>
-                Utils.responseOk()
-              case ValidationErrors(TeamErrorWrapper(errors)) =>
-                Utils.responseBadRequestWithBody(errors.map(_.message))
-              case InternalServerError =>
-                HttpResponse(status = StatusCodes.InternalServerError)
-            }
-            complete(responseFuture)
+            complete(Utils.responseOnEntityUpdate(teamService, teamDto))
           }
         } ~
         delete {
           path(IntNumber) { id =>
-            val responseFuture = (teamService ? RemoveEntity(id)).map {
-              case RemoveFailed =>
-                Utils.responseBadRequest()
-              case RemoveCompleted =>
-                Utils.responseOk()
-              case ValidationErrors(TeamErrorWrapper(errors)) =>
-                Utils.responseBadRequestWithBody(errors.map(_.message))
-              case InternalServerError =>
-                HttpResponse(status = StatusCodes.InternalServerError)
-            }
-            complete(responseFuture)
+            complete(Utils.responseOnEntityDelete(teamService, id))
           }
         }
     }

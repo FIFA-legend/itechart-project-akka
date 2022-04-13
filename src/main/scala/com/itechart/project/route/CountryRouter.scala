@@ -103,32 +103,12 @@ class CountryRouter(countryService: ActorRef)(implicit timeout: Timeout, ec: Exe
         } ~
         put {
           entity(as[CountryApiDto]) { countryDto =>
-            val responseFuture = (countryService ? UpdateEntity(countryDto)).map {
-              case UpdateFailed =>
-                HttpResponse(status = StatusCodes.NotFound)
-              case UpdateCompleted =>
-                Utils.responseOk()
-              case ValidationErrors(CountryErrorWrapper(errors)) =>
-                Utils.responseBadRequestWithBody(errors.map(_.message))
-              case InternalServerError =>
-                HttpResponse(status = StatusCodes.InternalServerError)
-            }
-            complete(responseFuture)
+            complete(Utils.responseOnEntityUpdate(countryService, countryDto))
           }
         } ~
         delete {
           path(IntNumber) { id =>
-            val responseFuture = (countryService ? RemoveEntity(id)).map {
-              case RemoveFailed =>
-                Utils.responseBadRequest()
-              case RemoveCompleted =>
-                Utils.responseOk()
-              case ValidationErrors(CountryErrorWrapper(errors)) =>
-                Utils.responseBadRequestWithBody(errors.map(_.message))
-              case InternalServerError =>
-                HttpResponse(status = StatusCodes.InternalServerError)
-            }
-            complete(responseFuture)
+            complete(Utils.responseOnEntityDelete(countryService, id))
           }
         }
     }

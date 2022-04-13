@@ -89,32 +89,12 @@ class StageRouter(stageService: ActorRef)(implicit timeout: Timeout, ec: Executi
         } ~
         put {
           entity(as[StageApiDto]) { stageDto =>
-            val responseFuture = (stageService ? UpdateEntity(stageDto)).map {
-              case UpdateFailed =>
-                HttpResponse(status = StatusCodes.NotFound)
-              case UpdateCompleted =>
-                Utils.responseOk()
-              case ValidationErrors(StageErrorWrapper(errors)) =>
-                Utils.responseBadRequestWithBody(errors.map(_.message))
-              case InternalServerError =>
-                HttpResponse(status = StatusCodes.InternalServerError)
-            }
-            complete(responseFuture)
+            complete(Utils.responseOnEntityUpdate(stageService, stageDto))
           }
         } ~
         delete {
           path(IntNumber) { id =>
-            val responseFuture = (stageService ? RemoveEntity(id)).map {
-              case RemoveFailed =>
-                Utils.responseBadRequest()
-              case RemoveCompleted =>
-                Utils.responseOk()
-              case ValidationErrors(StageErrorWrapper(errors)) =>
-                Utils.responseBadRequestWithBody(errors.map(_.message))
-              case InternalServerError =>
-                HttpResponse(status = StatusCodes.InternalServerError)
-            }
-            complete(responseFuture)
+            complete(Utils.responseOnEntityDelete(stageService, id))
           }
         }
     }
