@@ -35,6 +35,7 @@ object StartApp extends App {
       val countryRepository    = CountryRepository.of(db)
       val formationRepository  = FormationRepository.of(db)
       val leagueRepository     = LeagueRepository.of(db)
+      val matchRepository      = MatchRepository.of(db)
       val matchStatsRepository = MatchStatsRepository.of(db)
       val playerRepository     = PlayerRepository.of(db)
       val refereeRepository    = RefereeRepository.of(db)
@@ -43,9 +44,22 @@ object StartApp extends App {
       val teamRepository       = TeamRepository.of(db)
       val venueRepository      = VenueRepository.of(db)
 
-      val countryService    = system.actorOf(CountryService.props(countryRepository), "countryService")
-      val formationService  = system.actorOf(FormationService.props(formationRepository), "formationService")
-      val leagueService     = system.actorOf(LeagueService.props(leagueRepository, countryRepository), "leagueService")
+      val countryService   = system.actorOf(CountryService.props(countryRepository), "countryService")
+      val formationService = system.actorOf(FormationService.props(formationRepository), "formationService")
+      val leagueService    = system.actorOf(LeagueService.props(leagueRepository, countryRepository), "leagueService")
+      val matchService = system.actorOf(
+        MatchService.props(
+          matchRepository,
+          seasonRepository,
+          leagueRepository,
+          stageRepository,
+          teamRepository,
+          refereeRepository,
+          venueRepository,
+          formationRepository
+        ),
+        "matchService"
+      )
       val matchStatsService = system.actorOf(MatchStatsService.props(matchStatsRepository), "matchStatsService")
       val playerService     = system.actorOf(PlayerService.props(playerRepository, countryRepository), "playerService")
       val refereeService    = system.actorOf(RefereeService.props(refereeRepository, countryRepository), "refereeService")
@@ -57,6 +71,7 @@ object StartApp extends App {
       val countryRouter    = new CountryRouter(countryService)
       val formationRouter  = new FormationRouter(formationService)
       val leagueRouter     = new LeagueRouter(leagueService)
+      val matchRouter      = new MatchRouter(matchService)
       val matchStatsRouter = new MatchStatsRouter(matchStatsService)
       val playerRouter     = new PlayerRouter(playerService)
       val refereeRouter    = new RefereeRouter(refereeService)
@@ -68,7 +83,7 @@ object StartApp extends App {
       Http()
         .newServerAt("localhost", 8080)
         .bind(
-          countryRouter.countryRoutes ~ formationRouter.formationRoutes ~ leagueRouter.leagueRoutes ~
+          countryRouter.countryRoutes ~ formationRouter.formationRoutes ~ leagueRouter.leagueRoutes ~ matchRouter.matchRoutes ~
             matchStatsRouter.matchStatsRoutes ~ playerRouter.playerRoutes ~ refereeRouter.refereeRoutes ~
             seasonRouter.seasonRoutes ~ stageRouter.stageRoutes ~ teamRouter.teamRoutes ~ venueRouter.venueRoutes
         )
