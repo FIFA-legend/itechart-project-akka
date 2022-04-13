@@ -40,7 +40,7 @@ class FormationRouter(formationService: ActorRef)(implicit timeout: Timeout, ec:
                 HttpResponse(status = StatusCodes.NotFound)
               case OneFoundEntity(Some(formation: FormationApiDto)) =>
                 Utils.responseOkWithBody(formation)
-              case FormationValidationErrors(errors) =>
+              case ValidationErrors(FormationErrorWrapper(errors)) =>
                 Utils.responseBadRequestWithBody(errors.map(_.message))
               case InternalServerError =>
                 HttpResponse(status = StatusCodes.InternalServerError)

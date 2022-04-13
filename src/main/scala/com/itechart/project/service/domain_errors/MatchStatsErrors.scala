@@ -2,9 +2,7 @@ package com.itechart.project.service.domain_errors
 
 object MatchStatsErrors {
 
-  sealed trait MatchStatsError {
-    def message: String
-  }
+  sealed trait MatchStatsError extends DomainError
 
   object MatchStatsError {
     final case class InvalidMatchScore(score: Int, time: String) extends MatchStatsError {
@@ -23,7 +21,8 @@ object MatchStatsErrors {
     }
 
     final case class MatchStatsForeignKey(id: Long) extends MatchStatsError {
-      override def message: String = s"Match stats with id `$id` can't be deleted because it's a part of foreign key"
+      override def message: String =
+        s"Match stats with id `$id` can't be deleted because it's a part of foreign key"
     }
   }
 

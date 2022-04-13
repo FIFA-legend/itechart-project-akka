@@ -6,6 +6,7 @@ import akka.util.Timeout
 import com.itechart.project.domain.country.{Continent, Country, CountryId}
 import com.itechart.project.dto.country.CountryApiDto
 import com.itechart.project.repository.CountryRepository
+import com.itechart.project.service.CommonServiceMessages.ErrorWrapper
 import com.itechart.project.service.CommonServiceMessages.Requests._
 import com.itechart.project.service.CommonServiceMessages.Responses._
 import com.itechart.project.service.domain_errors.CountryErrors.CountryError
@@ -58,7 +59,7 @@ class CountryService(countryRepository: CountryRepository)(implicit ec: Executio
       validatedNameEither match {
         case Left(error) =>
           log.info(s"Validation of name = $name failed")
-          senderToReturn ! CountryValidationErrors(List(error))
+          senderToReturn ! ValidationErrors(CountryErrorWrapper(List(error)))
         case Right(validName) =>
           log.info(s"Extracting country with name = $name out of database")
           val countryFuture = countryRepository.findByName(validName)
@@ -80,7 +81,7 @@ class CountryService(countryRepository: CountryRepository)(implicit ec: Executio
       validatedCodeEither match {
         case Left(error) =>
           log.info(s"Validation of code = $code failed")
-          senderToReturn ! CountryValidationErrors(List(error))
+          senderToReturn ! ValidationErrors(CountryErrorWrapper(List(error)))
         case Right(validCode) =>
           log.info(s"Extracting country with code = $code out of database")
           val countryFuture = countryRepository.findByCode(validCode)
@@ -113,7 +114,7 @@ class CountryService(countryRepository: CountryRepository)(implicit ec: Executio
               senderToReturn ! OneEntityAdded(countryDto.copy(id = id.value))
             case Success(Left(errors)) =>
               log.info(s"Country $country doesn't created because of: ${errors.mkString("[", ", ", "]")}")
-              senderToReturn ! CountryValidationErrors(errors)
+              senderToReturn ! ValidationErrors(CountryErrorWrapper(errors))
             case Failure(ex) =>
               log.error(s"An error occurred while creating a country $country: $ex")
               senderToReturn ! InternalServerError
@@ -131,8 +132,8 @@ class CountryService(countryRepository: CountryRepository)(implicit ec: Executio
             case _ => List()
           }
           val errors: List[CountryError] = list.flatMap {
-            case CountryValidationErrors(errors) => errors
-            case _                               => List()
+            case ValidationErrors(CountryErrorWrapper(errors)) => errors
+            case _                                             => List()
           }
           log.info(s"Countries $countries added successfully")
           log.info(s"Other countries aren't added because of: ${errors.mkString("[", ", ", "]")}")
@@ -162,7 +163,7 @@ class CountryService(countryRepository: CountryRepository)(implicit ec: Executio
               senderToReturn ! result
             case Success(Left(errors)) =>
               log.info(s"Country $country isn't updated because of: ${errors.mkString("[", ", ", "]")}")
-              senderToReturn ! CountryValidationErrors(errors)
+              senderToReturn ! ValidationErrors(CountryErrorWrapper(errors))
             case Failure(ex) =>
               log.error(s"An error occurred while updating a country $country: $ex")
               senderToReturn ! InternalServerError
@@ -180,7 +181,7 @@ class CountryService(countryRepository: CountryRepository)(implicit ec: Executio
           senderToReturn ! result
         case Failure(_: SQLIntegrityConstraintViolationException) =>
           log.info(s"A country with id = $id can't be deleted because it's a part of foreign key")
-          senderToReturn ! CountryValidationErrors(List(CountryForeignKey(id)))
+          senderToReturn ! ValidationErrors(CountryErrorWrapper(List(CountryForeignKey(id))))
         case Failure(ex) =>
           log.error(s"An error occurred while deleting a country with id = $id: $ex")
           senderToReturn ! InternalServerError
@@ -189,7 +190,7 @@ class CountryService(countryRepository: CountryRepository)(implicit ec: Executio
 
   private def logErrorsAndSend(sender: ActorRef, countryDto: CountryApiDto, errors: List[CountryError]): Unit = {
     log.info(s"Validation of country = $countryDto failed because of: ${errors.mkString("[", ", ", "]")}")
-    sender ! CountryValidationErrors(errors)
+    sender ! ValidationErrors(CountryErrorWrapper(errors))
   }
 
   private def validateCountryDuplicatesOnCreate(country: Country): Future[List[CountryError]] = for {
@@ -259,6 +260,6 @@ object CountryService {
   case class AddAllCountries(countryDtoList: List[CountryApiDto])
 
   case class AllFoundCountries(countries: List[CountryApiDto])
-  case class CountryValidationErrors(errors: List[CountryError])
+  case class CountryErrorWrapper(override val errors: List[CountryError]) extends ErrorWrapper
   case class AllCountriesAdded(countries: List[CountryApiDto], errors: List[CountryError])
 }

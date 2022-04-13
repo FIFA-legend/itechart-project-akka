@@ -39,7 +39,7 @@ class TeamRouter(teamService: ActorRef)(implicit timeout: Timeout, ec: Execution
             val responseFuture = (teamService ? GetEntityByT(name)).map {
               case AllFoundTeams(teams) =>
                 Utils.responseOkWithBody(teams)
-              case TeamValidationErrors(errors) =>
+              case ValidationErrors(TeamErrorWrapper(errors)) =>
                 Utils.responseBadRequestWithBody(errors.map(_.message))
               case InternalServerError =>
                 HttpResponse(status = StatusCodes.InternalServerError)
@@ -86,7 +86,7 @@ class TeamRouter(teamService: ActorRef)(implicit timeout: Timeout, ec: Execution
                 val responseFuture = (teamService ? AddOneEntity(teamDto)).map {
                   case OneEntityAdded(team: TeamApiDto) =>
                     HttpResponse(status = StatusCodes.Created, entity = team.toJson.prettyPrint)
-                  case TeamValidationErrors(errors) =>
+                  case ValidationErrors(TeamErrorWrapper(errors)) =>
                     Utils.responseBadRequestWithBody(errors.map(_.message))
                   case InternalServerError =>
                     HttpResponse(status = StatusCodes.InternalServerError)
@@ -102,7 +102,7 @@ class TeamRouter(teamService: ActorRef)(implicit timeout: Timeout, ec: Execution
                 HttpResponse(status = StatusCodes.NotFound)
               case UpdateCompleted =>
                 Utils.responseOk()
-              case TeamValidationErrors(errors) =>
+              case ValidationErrors(TeamErrorWrapper(errors)) =>
                 Utils.responseBadRequestWithBody(errors.map(_.message))
               case InternalServerError =>
                 HttpResponse(status = StatusCodes.InternalServerError)
@@ -117,7 +117,7 @@ class TeamRouter(teamService: ActorRef)(implicit timeout: Timeout, ec: Execution
                 Utils.responseBadRequest()
               case RemoveCompleted =>
                 Utils.responseOk()
-              case TeamValidationErrors(errors) =>
+              case ValidationErrors(TeamErrorWrapper(errors)) =>
                 Utils.responseBadRequestWithBody(errors.map(_.message))
               case InternalServerError =>
                 HttpResponse(status = StatusCodes.InternalServerError)

@@ -41,7 +41,7 @@ class LeagueRouter(leagueService: ActorRef)(implicit timeout: Timeout, ec: Execu
                 HttpResponse(status = StatusCodes.NotFound)
               case OneFoundEntity(Some(league: LeagueApiDto)) =>
                 Utils.responseOkWithBody(league)
-              case LeagueValidationErrors(errors) =>
+              case ValidationErrors(LeagueErrorWrapper(errors)) =>
                 Utils.responseBadRequestWithBody(errors.map(_.message))
               case InternalServerError =>
                 HttpResponse(status = StatusCodes.InternalServerError)
@@ -88,7 +88,7 @@ class LeagueRouter(leagueService: ActorRef)(implicit timeout: Timeout, ec: Execu
                 val responseFuture = (leagueService ? AddOneEntity(leagueDto)).map {
                   case OneEntityAdded(league: LeagueApiDto) =>
                     HttpResponse(status = StatusCodes.Created, entity = league.toJson.prettyPrint)
-                  case LeagueValidationErrors(errors) =>
+                  case ValidationErrors(LeagueErrorWrapper(errors)) =>
                     Utils.responseBadRequestWithBody(errors.map(_.message))
                   case InternalServerError =>
                     HttpResponse(status = StatusCodes.InternalServerError)
@@ -104,7 +104,7 @@ class LeagueRouter(leagueService: ActorRef)(implicit timeout: Timeout, ec: Execu
                 HttpResponse(status = StatusCodes.NotFound)
               case UpdateCompleted =>
                 Utils.responseOk()
-              case LeagueValidationErrors(errors) =>
+              case ValidationErrors(LeagueErrorWrapper(errors)) =>
                 Utils.responseBadRequestWithBody(errors.map(_.message))
               case InternalServerError =>
                 HttpResponse(status = StatusCodes.InternalServerError)
@@ -119,7 +119,7 @@ class LeagueRouter(leagueService: ActorRef)(implicit timeout: Timeout, ec: Execu
                 Utils.responseBadRequest()
               case RemoveCompleted =>
                 Utils.responseOk()
-              case LeagueValidationErrors(errors) =>
+              case ValidationErrors(LeagueErrorWrapper(errors)) =>
                 Utils.responseBadRequestWithBody(errors.map(_.message))
               case InternalServerError =>
                 HttpResponse(status = StatusCodes.InternalServerError)

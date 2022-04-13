@@ -4,6 +4,7 @@ import akka.actor.{Actor, ActorLogging, Props}
 import com.itechart.project.domain.formation.{Formation, FormationId}
 import com.itechart.project.dto.formation.FormationApiDto
 import com.itechart.project.repository.FormationRepository
+import com.itechart.project.service.CommonServiceMessages.ErrorWrapper
 import com.itechart.project.service.CommonServiceMessages.Requests._
 import com.itechart.project.service.CommonServiceMessages.Responses._
 import com.itechart.project.service.domain_errors.FormationErrors.FormationError
@@ -53,7 +54,7 @@ class FormationService(formationRepository: FormationRepository)(implicit ec: Ex
       validatedNameEither match {
         case Left(error) =>
           log.info(s"Validation of name = $name failed")
-          senderToReturn ! FormationValidationErrors(List(error))
+          senderToReturn ! ValidationErrors(FormationErrorWrapper(List(error)))
         case Right(validName) =>
           log.info(s"Extracting formation with name = $name out of database")
           val formationFuture = formationRepository.findByName(validName)
@@ -77,5 +78,5 @@ object FormationService {
     Props(new FormationService(formationRepository))
 
   case class AllFoundFormations(formations: List[FormationApiDto])
-  case class FormationValidationErrors(errors: List[FormationError])
+  case class FormationErrorWrapper(override val errors: List[FormationError]) extends ErrorWrapper
 }

@@ -5,6 +5,7 @@ import akka.util.Timeout
 import com.itechart.project.domain.match_stats.{Attendance, MatchScore, MatchStats, MatchStatsId}
 import com.itechart.project.dto.match_stats.MatchStatsApiDto
 import com.itechart.project.repository.MatchStatsRepository
+import com.itechart.project.service.CommonServiceMessages.ErrorWrapper
 import com.itechart.project.service.CommonServiceMessages.Requests._
 import com.itechart.project.service.CommonServiceMessages.Responses._
 import com.itechart.project.service.domain_errors.MatchStatsErrors.MatchStatsError
@@ -85,7 +86,7 @@ class MatchStatsService(matchStatsRepository: MatchStatsRepository)(implicit ec:
           senderToReturn ! result
         case Failure(_: SQLIntegrityConstraintViolationException) =>
           log.info(s"Match stats with id = $id can't be deleted because it's a part of foreign key")
-          senderToReturn ! MatchStatsValidationErrors(List(MatchStatsForeignKey(id)))
+          senderToReturn ! ValidationErrors(MatchStatsErrorWrapper(List(MatchStatsForeignKey(id))))
         case Failure(ex) =>
           log.error(s"An error occurred while deleting match stats with id = $id: $ex")
           senderToReturn ! InternalServerError
@@ -98,7 +99,7 @@ class MatchStatsService(matchStatsRepository: MatchStatsRepository)(implicit ec:
     errors:        List[MatchStatsError]
   ): Unit = {
     log.info(s"Validation of match stats = $matchStatsDto failed because of: ${errors.mkString("[", ", ", "]")}")
-    sender ! MatchStatsValidationErrors(errors)
+    sender ! ValidationErrors(MatchStatsErrorWrapper(errors))
   }
 
   private def validateMatchStatsDto(matchStatsDto: MatchStatsApiDto): Either[List[MatchStatsError], MatchStats] = {
@@ -240,5 +241,5 @@ object MatchStatsService {
   def props(matchStatsRepository: MatchStatsRepository)(implicit ec: ExecutionContext, timeout: Timeout): Props =
     Props(new MatchStatsService(matchStatsRepository))
 
-  case class MatchStatsValidationErrors(errors: List[MatchStatsError])
+  case class MatchStatsErrorWrapper(override val errors: List[MatchStatsError]) extends ErrorWrapper
 }

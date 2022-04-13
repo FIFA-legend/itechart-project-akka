@@ -6,6 +6,7 @@ import akka.pattern.ask
 import com.itechart.project.domain.stage.{Stage, StageId}
 import com.itechart.project.dto.stage.StageApiDto
 import com.itechart.project.repository.StageRepository
+import com.itechart.project.service.CommonServiceMessages.ErrorWrapper
 import com.itechart.project.service.CommonServiceMessages.Requests._
 import com.itechart.project.service.CommonServiceMessages.Responses._
 import com.itechart.project.service.domain_errors.StageErrors.StageError
@@ -56,7 +57,7 @@ class StageService(stageRepository: StageRepository)(implicit ec: ExecutionConte
       validatedNameEither match {
         case Left(error) =>
           log.info(s"Validation of name = $name failed")
-          senderToReturn ! StageValidationErrors(List(error))
+          senderToReturn ! ValidationErrors(StageErrorWrapper(List(error)))
         case Right(validName) =>
           log.info(s"Extracting stage with name = $name out of database")
           val stageFuture = stageRepository.findByName(validName)
@@ -89,7 +90,7 @@ class StageService(stageRepository: StageRepository)(implicit ec: ExecutionConte
               senderToReturn ! OneEntityAdded(stageDto.copy(id = id.value))
             case Success(Left(errors)) =>
               log.info(s"Stage $stage doesn't created because of: ${errors.mkString("[", ", ", "]")}")
-              senderToReturn ! StageValidationErrors(errors)
+              senderToReturn ! ValidationErrors(StageErrorWrapper(errors))
             case Failure(ex) =>
               log.error(s"An error occurred while creating a stage $stage: $ex")
               senderToReturn ! InternalServerError
@@ -107,8 +108,8 @@ class StageService(stageRepository: StageRepository)(implicit ec: ExecutionConte
             case _ => List()
           }
           val errors: List[StageError] = list.flatMap {
-            case StageValidationErrors(errors) => errors
-            case _                             => List()
+            case ValidationErrors(StageErrorWrapper(errors)) => errors
+            case _                                           => List()
           }
           log.info(s"Stages $stages added successfully")
           log.info(s"Other stages aren't added because of: ${errors.mkString("[", ", ", "]")}")
@@ -138,7 +139,7 @@ class StageService(stageRepository: StageRepository)(implicit ec: ExecutionConte
               senderToReturn ! result
             case Success(Left(errors)) =>
               log.info(s"Stage $stage isn't updated because of: ${errors.mkString("[", ", ", "]")}")
-              senderToReturn ! StageValidationErrors(errors)
+              senderToReturn ! ValidationErrors(StageErrorWrapper(errors))
             case Failure(ex) =>
               log.error(s"An error occurred while updating a stage $stage: $ex")
               senderToReturn ! InternalServerError
@@ -156,7 +157,7 @@ class StageService(stageRepository: StageRepository)(implicit ec: ExecutionConte
           senderToReturn ! result
         case Failure(_: SQLIntegrityConstraintViolationException) =>
           log.info(s"A stage with id = $id can't be deleted because it's a part of foreign key")
-          senderToReturn ! StageValidationErrors(List(StageForeignKey(id)))
+          senderToReturn ! ValidationErrors(StageErrorWrapper(List(StageForeignKey(id))))
         case Failure(ex) =>
           log.error(s"An error occurred while deleting a stage with id = $id: $ex")
           senderToReturn ! InternalServerError
@@ -165,7 +166,7 @@ class StageService(stageRepository: StageRepository)(implicit ec: ExecutionConte
 
   private def logErrorsAndSend(sender: ActorRef, stageDto: StageApiDto, errors: List[StageError]): Unit = {
     log.info(s"Validation of stage = $stageDto failed because of: ${errors.mkString("[", ", ", "]")}")
-    sender ! StageValidationErrors(errors)
+    sender ! ValidationErrors(StageErrorWrapper(errors))
   }
 
   private def validateStageDuplicates(stage: Stage): Future[List[StageError]] = for {
@@ -194,6 +195,6 @@ object StageService {
   case class AddAllStages(stageDtoList: List[StageApiDto])
 
   case class AllFoundStages(stages: List[StageApiDto])
-  case class StageValidationErrors(errors: List[StageError])
+  case class StageErrorWrapper(override val errors: List[StageError]) extends ErrorWrapper
   case class AllStagesAdded(stages: List[StageApiDto], errors: List[StageError])
 }

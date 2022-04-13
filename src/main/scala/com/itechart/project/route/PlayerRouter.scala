@@ -39,7 +39,7 @@ class PlayerRouter(playerService: ActorRef)(implicit timeout: Timeout, ec: Execu
             val responseFuture = (playerService ? GetEntityByT(name)).map {
               case AllFoundPlayers(players) =>
                 Utils.responseOkWithBody(players)
-              case PlayerValidationErrors(errors) =>
+              case ValidationErrors(PlayerErrorWrapper(errors)) =>
                 Utils.responseBadRequestWithBody(errors.map(_.message))
               case InternalServerError =>
                 HttpResponse(status = StatusCodes.InternalServerError)
@@ -86,7 +86,7 @@ class PlayerRouter(playerService: ActorRef)(implicit timeout: Timeout, ec: Execu
                 val responseFuture = (playerService ? AddOneEntity(playerDto)).map {
                   case OneEntityAdded(player: PlayerApiDto) =>
                     HttpResponse(status = StatusCodes.Created, entity = player.toJson.prettyPrint)
-                  case PlayerValidationErrors(errors) =>
+                  case ValidationErrors(PlayerErrorWrapper(errors)) =>
                     Utils.responseBadRequestWithBody(errors.map(_.message))
                   case InternalServerError =>
                     HttpResponse(status = StatusCodes.InternalServerError)
@@ -102,7 +102,7 @@ class PlayerRouter(playerService: ActorRef)(implicit timeout: Timeout, ec: Execu
                 HttpResponse(status = StatusCodes.NotFound)
               case UpdateCompleted =>
                 Utils.responseOk()
-              case PlayerValidationErrors(errors) =>
+              case ValidationErrors(PlayerErrorWrapper(errors)) =>
                 Utils.responseBadRequestWithBody(errors.map(_.message))
               case InternalServerError =>
                 HttpResponse(status = StatusCodes.InternalServerError)
@@ -117,7 +117,7 @@ class PlayerRouter(playerService: ActorRef)(implicit timeout: Timeout, ec: Execu
                 Utils.responseBadRequest()
               case RemoveCompleted =>
                 Utils.responseOk()
-              case PlayerValidationErrors(errors) =>
+              case ValidationErrors(PlayerErrorWrapper(errors)) =>
                 Utils.responseBadRequestWithBody(errors.map(_.message))
               case InternalServerError =>
                 HttpResponse(status = StatusCodes.InternalServerError)

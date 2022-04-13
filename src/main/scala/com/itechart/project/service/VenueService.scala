@@ -7,6 +7,7 @@ import com.itechart.project.domain.country.CountryId
 import com.itechart.project.domain.venue.{Venue, VenueId}
 import com.itechart.project.dto.venue.VenueApiDto
 import com.itechart.project.repository.{CountryRepository, VenueRepository}
+import com.itechart.project.service.CommonServiceMessages.ErrorWrapper
 import com.itechart.project.service.CommonServiceMessages.Requests._
 import com.itechart.project.service.CommonServiceMessages.Responses._
 import com.itechart.project.service.domain_errors.VenueErrors.VenueError
@@ -63,7 +64,7 @@ class VenueService(
       validatedNameEither match {
         case Left(error) =>
           log.info(s"Validation of name = $name failed")
-          senderToReturn ! VenueValidationErrors(List(error))
+          senderToReturn ! ValidationErrors(VenueErrorWrapper(List(error)))
         case Right(validName) =>
           log.info(s"Extracting venue with name = $name out of database")
           val venueFuture = venueRepository.findByName(validName)
@@ -84,7 +85,7 @@ class VenueService(
       validatedCityEither match {
         case Left(error) =>
           log.info(s"Validation of city = $city failed")
-          senderToReturn ! VenueValidationErrors(List(error))
+          senderToReturn ! ValidationErrors(VenueErrorWrapper(List(error)))
         case Right(validCity) =>
           log.info(s"Extracting venues with city = $city out of database")
           val venuesFuture = venueRepository.findByCity(validCity)
@@ -130,7 +131,7 @@ class VenueService(
               senderToReturn ! OneEntityAdded(venueDto.copy(id = id.value))
             case Success(Left(errors)) =>
               log.info(s"Venue $venue doesn't created because of: ${errors.mkString("[", ", ", "]")}")
-              senderToReturn ! VenueValidationErrors(errors)
+              senderToReturn ! ValidationErrors(VenueErrorWrapper(errors))
             case Failure(ex) =>
               log.error(s"An error occurred while creating a venue $venue: $ex")
               senderToReturn ! InternalServerError
@@ -148,8 +149,8 @@ class VenueService(
             case _ => List()
           }
           val errors: List[VenueError] = list.flatMap {
-            case VenueValidationErrors(errors) => errors
-            case _                             => List()
+            case ValidationErrors(VenueErrorWrapper(errors)) => errors
+            case _                                           => List()
           }
           log.info(s"Venues $venues added successfully")
           log.info(s"Other venues aren't added because of: ${errors.mkString("[", ", ", "]")}")
@@ -179,7 +180,7 @@ class VenueService(
               senderToReturn ! result
             case Success(Left(errors)) =>
               log.info(s"Venue $venue isn't updated because of: ${errors.mkString("[", ", ", "]")}")
-              senderToReturn ! VenueValidationErrors(errors)
+              senderToReturn ! ValidationErrors(VenueErrorWrapper(errors))
             case Failure(ex) =>
               log.error(s"An error occurred while updating a venue $venue: $ex")
               senderToReturn ! InternalServerError
@@ -197,7 +198,7 @@ class VenueService(
           senderToReturn ! result
         case Failure(_: SQLIntegrityConstraintViolationException) =>
           log.info(s"A venue with id = $id can't be deleted because it's a part of foreign key")
-          senderToReturn ! VenueValidationErrors(List(VenueForeignKey(id)))
+          senderToReturn ! ValidationErrors(VenueErrorWrapper(List(VenueForeignKey(id))))
         case Failure(ex) =>
           log.error(s"An error occurred while deleting a venue with id = $id: $ex")
           senderToReturn ! InternalServerError
@@ -206,7 +207,7 @@ class VenueService(
 
   private def logErrorsAndSend(sender: ActorRef, venueDto: VenueApiDto, errors: List[VenueError]): Unit = {
     log.info(s"Validation of venue = $venueDto failed because of: ${errors.mkString("[", ", ", "]")}")
-    sender ! VenueValidationErrors(errors)
+    sender ! ValidationErrors(VenueErrorWrapper(errors))
   }
 
   private def validateVenueDuplicatesOnCreate(venue: Venue): Future[List[VenueError]] = for {
@@ -274,6 +275,6 @@ object VenueService {
   case class AddAllVenues(venueDtoList: List[VenueApiDto])
 
   case class AllFoundVenues(venues: List[VenueApiDto])
-  case class VenueValidationErrors(errors: List[VenueError])
+  case class VenueErrorWrapper(override val errors: List[VenueError]) extends ErrorWrapper
   case class AllVenuesAdded(venues: List[VenueApiDto], errors: List[VenueError])
 }

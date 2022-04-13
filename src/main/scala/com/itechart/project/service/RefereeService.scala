@@ -7,6 +7,7 @@ import com.itechart.project.domain.country.CountryId
 import com.itechart.project.domain.referee.{Referee, RefereeId, RefereeImage}
 import com.itechart.project.dto.referee.RefereeApiDto
 import com.itechart.project.repository.{CountryRepository, RefereeRepository}
+import com.itechart.project.service.CommonServiceMessages.ErrorWrapper
 import com.itechart.project.service.CommonServiceMessages.Requests._
 import com.itechart.project.service.CommonServiceMessages.Responses._
 import com.itechart.project.service.domain_errors.RefereeErrors.RefereeError
@@ -89,7 +90,7 @@ class RefereeService(
               senderToReturn ! OneEntityAdded(refereeDto.copy(id = id.value))
             case Success(Left(errors)) =>
               log.info(s"Referee $referee doesn't created because of: ${errors.mkString("[", ", ", "]")}")
-              senderToReturn ! RefereeValidationErrors(errors)
+              senderToReturn ! ValidationErrors(RefereeErrorWrapper(errors))
             case Failure(ex) =>
               log.error(s"An error occurred while creating a referee $referee: $ex")
               senderToReturn ! InternalServerError
@@ -107,8 +108,8 @@ class RefereeService(
             case _ => List()
           }
           val errors: List[RefereeError] = list.flatMap {
-            case RefereeValidationErrors(errors) => errors
-            case _                               => List()
+            case ValidationErrors(RefereeErrorWrapper(errors)) => errors
+            case _                                             => List()
           }
           log.info(s"Referees $referees added successfully")
           log.info(s"Other referees aren't added because of: ${errors.mkString("[", ", ", "]")}")
@@ -138,7 +139,7 @@ class RefereeService(
               senderToReturn ! result
             case Success(Left(errors)) =>
               log.info(s"Referee $referee isn't updated because of: ${errors.mkString("[", ", ", "]")}")
-              senderToReturn ! RefereeValidationErrors(errors)
+              senderToReturn ! ValidationErrors(RefereeErrorWrapper(errors))
             case Failure(ex) =>
               log.error(s"An error occurred while updating a referee $referee: $ex")
               senderToReturn ! InternalServerError
@@ -156,7 +157,7 @@ class RefereeService(
           senderToReturn ! result
         case Failure(_: SQLIntegrityConstraintViolationException) =>
           log.info(s"A referee with id = $id can't be deleted because it's a part of foreign key")
-          senderToReturn ! RefereeValidationErrors(List(RefereeForeignKey(id)))
+          senderToReturn ! ValidationErrors(RefereeErrorWrapper(List(RefereeForeignKey(id))))
         case Failure(ex) =>
           log.error(s"An error occurred while deleting a referee with id = $id: $ex")
           senderToReturn ! InternalServerError
@@ -165,7 +166,7 @@ class RefereeService(
 
   private def logErrorsAndSend(sender: ActorRef, refereeDto: RefereeApiDto, errors: List[RefereeError]): Unit = {
     log.info(s"Validation of referee = $refereeDto failed because of: ${errors.mkString("[", ", ", "]")}")
-    sender ! RefereeValidationErrors(errors)
+    sender ! ValidationErrors(RefereeErrorWrapper(errors))
   }
 
   private def validateRefereeDuplicates(referee: Referee): Future[List[RefereeError]] = for {
@@ -239,6 +240,6 @@ object RefereeService {
   case class AddAllReferees(refereeDtoList: List[RefereeApiDto])
 
   case class AllFoundReferees(referees: List[RefereeApiDto])
-  case class RefereeValidationErrors(errors: List[RefereeError])
+  case class RefereeErrorWrapper(override val errors: List[RefereeError]) extends ErrorWrapper
   case class AllRefereesAdded(referees: List[RefereeApiDto], errors: List[RefereeError])
 }

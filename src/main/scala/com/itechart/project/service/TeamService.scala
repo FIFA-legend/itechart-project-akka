@@ -7,6 +7,7 @@ import com.itechart.project.domain.country.CountryId
 import com.itechart.project.domain.team.{Team, TeamId, TeamLogo}
 import com.itechart.project.dto.team.TeamApiDto
 import com.itechart.project.repository.{CountryRepository, TeamRepository}
+import com.itechart.project.service.CommonServiceMessages.ErrorWrapper
 import com.itechart.project.service.CommonServiceMessages.Requests._
 import com.itechart.project.service.CommonServiceMessages.Responses._
 import com.itechart.project.service.domain_errors.TeamErrors.TeamError
@@ -64,7 +65,7 @@ class TeamService(
       validatedNameEither match {
         case Left(error) =>
           log.info(s"Validation of name = $name failed")
-          senderToReturn ! TeamValidationErrors(List(error))
+          senderToReturn ! ValidationErrors(TeamErrorWrapper(List(error)))
         case Right(validName) =>
           log.info(s"Extracting teams with name = $name out of database")
           val teamsFuture = teamRepository.findByName(validName)
@@ -110,7 +111,7 @@ class TeamService(
               senderToReturn ! OneEntityAdded(teamDto.copy(id = id.value))
             case Success(Left(errors)) =>
               log.info(s"Team $team doesn't created because of: ${errors.mkString("[", ", ", "]")}")
-              senderToReturn ! TeamValidationErrors(errors)
+              senderToReturn ! ValidationErrors(TeamErrorWrapper(errors))
             case Failure(ex) =>
               log.error(s"An error occurred while creating a team $team: $ex")
               senderToReturn ! InternalServerError
@@ -128,8 +129,8 @@ class TeamService(
             case _ => List()
           }
           val errors: List[TeamError] = list.flatMap {
-            case TeamValidationErrors(errors) => errors
-            case _                            => List()
+            case ValidationErrors(TeamErrorWrapper(errors)) => errors
+            case _                                          => List()
           }
           log.info(s"Teams $teams added successfully")
           log.info(s"Other teams aren't added because of: ${errors.mkString("[", ", ", "]")}")
@@ -159,7 +160,7 @@ class TeamService(
               senderToReturn ! result
             case Success(Left(errors)) =>
               log.info(s"Team $team isn't updated because of: ${errors.mkString("[", ", ", "]")}")
-              senderToReturn ! TeamValidationErrors(errors)
+              senderToReturn ! ValidationErrors(TeamErrorWrapper(errors))
             case Failure(ex) =>
               log.error(s"An error occurred while updating a team $team: $ex")
               senderToReturn ! InternalServerError
@@ -177,7 +178,7 @@ class TeamService(
           senderToReturn ! result
         case Failure(_: SQLIntegrityConstraintViolationException) =>
           log.info(s"A team with id = $id can't be deleted because it's a part of foreign key")
-          senderToReturn ! TeamValidationErrors(List(TeamForeignKey(id)))
+          senderToReturn ! ValidationErrors(TeamErrorWrapper(List(TeamForeignKey(id))))
         case Failure(ex) =>
           log.error(s"An error occurred while deleting a team with id = $id: $ex")
           senderToReturn ! InternalServerError
@@ -186,7 +187,7 @@ class TeamService(
 
   private def logErrorsAndSend(sender: ActorRef, teamDto: TeamApiDto, errors: List[TeamError]): Unit = {
     log.info(s"Validation of team = $teamDto failed because of: ${errors.mkString("[", ", ", "]")}")
-    sender ! TeamValidationErrors(errors)
+    sender ! ValidationErrors(TeamErrorWrapper(errors))
   }
 
   private def validateTeamDuplicates(team: Team): Future[List[TeamError]] = for {
@@ -250,6 +251,6 @@ object TeamService {
   case class AddAllTeams(teamDtoList: List[TeamApiDto])
 
   case class AllFoundTeams(teams: List[TeamApiDto])
-  case class TeamValidationErrors(errors: List[TeamError])
+  case class TeamErrorWrapper(override val errors: List[TeamError]) extends ErrorWrapper
   case class AllTeamsAdded(teams: List[TeamApiDto], errors: List[TeamError])
 }

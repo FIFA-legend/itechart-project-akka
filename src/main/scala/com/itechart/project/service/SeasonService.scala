@@ -6,6 +6,7 @@ import akka.util.Timeout
 import com.itechart.project.domain.season.{Season, SeasonId}
 import com.itechart.project.dto.season.SeasonApiDto
 import com.itechart.project.repository.SeasonRepository
+import com.itechart.project.service.CommonServiceMessages.ErrorWrapper
 import com.itechart.project.service.CommonServiceMessages.Requests._
 import com.itechart.project.service.CommonServiceMessages.Responses._
 import com.itechart.project.service.domain_errors.SeasonErrors.SeasonError
@@ -60,7 +61,7 @@ class SeasonService(seasonRepository: SeasonRepository)(implicit ec: ExecutionCo
       validatedNameEither match {
         case Left(error) =>
           log.info(s"Validation of name = $name failed")
-          senderToReturn ! SeasonValidationErrors(List(error))
+          senderToReturn ! ValidationErrors(SeasonErrorWrapper(List(error)))
         case Right(validName) =>
           log.info(s"Extracting season with name = $name out of database")
           val seasonFuture = seasonRepository.findByName(validName)
@@ -93,7 +94,7 @@ class SeasonService(seasonRepository: SeasonRepository)(implicit ec: ExecutionCo
               senderToReturn ! OneEntityAdded(seasonDto.copy(id = id.value))
             case Success(Left(errors)) =>
               log.info(s"Season $season doesn't created because of: ${errors.mkString("[", ", ", "]")}")
-              senderToReturn ! SeasonValidationErrors(errors)
+              senderToReturn ! ValidationErrors(SeasonErrorWrapper(errors))
             case Failure(ex) =>
               log.error(s"An error occurred while creating a season $season: $ex")
               senderToReturn ! InternalServerError
@@ -111,8 +112,8 @@ class SeasonService(seasonRepository: SeasonRepository)(implicit ec: ExecutionCo
             case _ => List()
           }
           val errors: List[SeasonError] = list.flatMap {
-            case SeasonValidationErrors(errors) => errors
-            case _                              => List()
+            case ValidationErrors(SeasonErrorWrapper(errors)) => errors
+            case _                                            => List()
           }
           log.info(s"Seasons $seasons added successfully")
           log.info(s"Other seasons aren't added because of: ${errors.mkString("[", ", ", "]")}")
@@ -142,7 +143,7 @@ class SeasonService(seasonRepository: SeasonRepository)(implicit ec: ExecutionCo
               senderToReturn ! result
             case Success(Left(errors)) =>
               log.info(s"Season $season isn't updated because of: ${errors.mkString("[", ", ", "]")}")
-              senderToReturn ! SeasonValidationErrors(errors)
+              senderToReturn ! ValidationErrors(SeasonErrorWrapper(errors))
             case Failure(ex) =>
               log.error(s"An error occurred while updating a season $season: $ex")
               senderToReturn ! InternalServerError
@@ -160,7 +161,7 @@ class SeasonService(seasonRepository: SeasonRepository)(implicit ec: ExecutionCo
           senderToReturn ! result
         case Failure(_: SQLIntegrityConstraintViolationException) =>
           log.info(s"A season with id = $id can't be deleted because it's a part of foreign key")
-          senderToReturn ! SeasonValidationErrors(List(SeasonForeignKey(id)))
+          senderToReturn ! ValidationErrors(SeasonErrorWrapper(List(SeasonForeignKey(id))))
         case Failure(ex) =>
           log.error(s"An error occurred while deleting a season with id = $id: $ex")
           senderToReturn ! InternalServerError
@@ -169,7 +170,7 @@ class SeasonService(seasonRepository: SeasonRepository)(implicit ec: ExecutionCo
 
   private def logErrorsAndSend(sender: ActorRef, seasonDto: SeasonApiDto, errors: List[SeasonError]): Unit = {
     log.info(s"Validation of season = $seasonDto failed because of: ${errors.mkString("[", ", ", "]")}")
-    sender ! SeasonValidationErrors(errors)
+    sender ! ValidationErrors(SeasonErrorWrapper(errors))
   }
 
   private def validateSeasonDuplicatesOnCreate(season: Season): Future[List[SeasonError]] = for {
@@ -231,6 +232,6 @@ object SeasonService {
   case class AddAllSeasons(seasonDtoList: List[SeasonApiDto])
 
   case class AllFoundSeasons(seasons: List[SeasonApiDto])
-  case class SeasonValidationErrors(errors: List[SeasonError])
+  case class SeasonErrorWrapper(override val errors: List[SeasonError]) extends ErrorWrapper
   case class AllSeasonsAdded(seasons: List[SeasonApiDto], errors: List[SeasonError])
 }

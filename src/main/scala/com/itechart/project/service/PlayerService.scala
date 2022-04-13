@@ -7,6 +7,7 @@ import com.itechart.project.domain.country.CountryId
 import com.itechart.project.domain.player.{Height, Player, PlayerId, PlayerImage, Weight}
 import com.itechart.project.dto.player.PlayerApiDto
 import com.itechart.project.repository.{CountryRepository, PlayerRepository}
+import com.itechart.project.service.CommonServiceMessages.ErrorWrapper
 import com.itechart.project.service.CommonServiceMessages.Requests._
 import com.itechart.project.service.CommonServiceMessages.Responses._
 import com.itechart.project.service.domain_errors.PlayerErrors.PlayerError
@@ -68,7 +69,7 @@ class PlayerService(
       validatedNameEither match {
         case Left(error) =>
           log.info(s"Validation of last name = $lastName failed")
-          senderToReturn ! PlayerValidationErrors(List(error))
+          senderToReturn ! ValidationErrors(PlayerErrorWrapper(List(error)))
         case Right(validName) =>
           log.info(s"Extracting players with last name = $lastName out of database")
           val playersFuture = playerRepository.findByLastName(validName)
@@ -114,7 +115,7 @@ class PlayerService(
               senderToReturn ! OneEntityAdded(playerDto.copy(id = id.value, age = player.age.value))
             case Success(Left(errors)) =>
               log.info(s"Player $player doesn't created because of: ${errors.mkString("[", ", ", "]")}")
-              senderToReturn ! PlayerValidationErrors(errors)
+              senderToReturn ! ValidationErrors(PlayerErrorWrapper(errors))
             case Failure(ex) =>
               log.error(s"An error occurred while creating a player $player: $ex")
               senderToReturn ! InternalServerError
@@ -132,8 +133,8 @@ class PlayerService(
             case _ => List()
           }
           val errors: List[PlayerError] = list.flatMap {
-            case PlayerValidationErrors(errors) => errors
-            case _                              => List()
+            case ValidationErrors(PlayerErrorWrapper(errors)) => errors
+            case _                                            => List()
           }
           log.info(s"Players $players added successfully")
           log.info(s"Other players aren't added because of: ${errors.mkString("[", ", ", "]")}")
@@ -163,7 +164,7 @@ class PlayerService(
               senderToReturn ! result
             case Success(Left(errors)) =>
               log.info(s"Player $player isn't updated because of: ${errors.mkString("[", ", ", "]")}")
-              senderToReturn ! PlayerValidationErrors(errors)
+              senderToReturn ! ValidationErrors(PlayerErrorWrapper(errors))
             case Failure(ex) =>
               log.error(s"An error occurred while updating a player $player: $ex")
               senderToReturn ! InternalServerError
@@ -181,7 +182,7 @@ class PlayerService(
           senderToReturn ! result
         case Failure(_: SQLIntegrityConstraintViolationException) =>
           log.info(s"A player with id = $id can't be deleted because it's a part of foreign key")
-          senderToReturn ! PlayerValidationErrors(List(PlayerForeignKey(id)))
+          senderToReturn ! ValidationErrors(PlayerErrorWrapper(List(PlayerForeignKey(id))))
         case Failure(ex) =>
           log.error(s"An error occurred while deleting a player with id = $id: $ex")
           senderToReturn ! InternalServerError
@@ -190,7 +191,7 @@ class PlayerService(
 
   private def logErrorsAndSend(sender: ActorRef, playerDto: PlayerApiDto, errors: List[PlayerError]): Unit = {
     log.info(s"Validation of player = $playerDto failed because of: ${errors.mkString("[", ", ", "]")}")
-    sender ! PlayerValidationErrors(errors)
+    sender ! ValidationErrors(PlayerErrorWrapper(errors))
   }
 
   private def validatePlayerDuplicates(player: Player): Future[List[PlayerError]] = for {
@@ -296,6 +297,6 @@ object PlayerService {
   case class AddAllPlayers(playersListDto: List[PlayerApiDto])
 
   case class AllFoundPlayers(players: List[PlayerApiDto])
-  case class PlayerValidationErrors(errors: List[PlayerError])
+  case class PlayerErrorWrapper(override val errors: List[PlayerError]) extends ErrorWrapper
   case class AllPlayersAdded(players: List[PlayerApiDto], errors: List[PlayerError])
 }

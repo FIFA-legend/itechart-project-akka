@@ -4,9 +4,7 @@ import java.time.LocalDate
 
 object SeasonErrors {
 
-  sealed trait SeasonError {
-    def message: String
-  }
+  sealed trait SeasonError extends DomainError
 
   object SeasonError {
     final case class InvalidSeasonName(name: String) extends SeasonError {
@@ -15,7 +13,8 @@ object SeasonErrors {
     }
 
     final case class DuplicateSeasonName(name: String) extends SeasonError {
-      override def message: String = s"Duplicate season name `$name`. Season name must be unique"
+      override def message: String =
+        s"Duplicate season name `$name`. Season name must be unique"
     }
 
     final case class InvalidSeasonStartDate(date: LocalDate) extends SeasonError {
@@ -29,7 +28,8 @@ object SeasonErrors {
     }
 
     final case class SeasonForeignKey(id: Int) extends SeasonError {
-      override def message: String = s"Season with id `$id` can't be deleted because it's a part of foreign key"
+      override def message: String =
+        s"Season with id `$id` can't be deleted because it's a part of foreign key"
     }
   }
 

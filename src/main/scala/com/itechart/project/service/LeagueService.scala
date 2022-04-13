@@ -7,6 +7,7 @@ import com.itechart.project.domain.country.CountryId
 import com.itechart.project.domain.league.{League, LeagueId}
 import com.itechart.project.dto.league.LeagueApiDto
 import com.itechart.project.repository.{CountryRepository, LeagueRepository}
+import com.itechart.project.service.CommonServiceMessages.ErrorWrapper
 import com.itechart.project.service.CommonServiceMessages.Requests._
 import com.itechart.project.service.CommonServiceMessages.Responses._
 import com.itechart.project.service.domain_errors.LeagueErrors.LeagueError
@@ -62,7 +63,7 @@ class LeagueService(
       validatedNameEither match {
         case Left(error) =>
           log.info(s"Validation of name = $name failed")
-          senderToReturn ! LeagueValidationErrors(List(error))
+          senderToReturn ! ValidationErrors(LeagueErrorWrapper(List(error)))
         case Right(validName) =>
           log.info(s"Extracting league with name = $name out of database")
           val leagueFuture = leagueRepository.findByName(validName)
@@ -108,7 +109,7 @@ class LeagueService(
               senderToReturn ! OneEntityAdded(leagueDto.copy(id = id.value))
             case Success(Left(errors)) =>
               log.info(s"League $league doesn't created because of: ${errors.mkString("[", ", ", "]")}")
-              senderToReturn ! LeagueValidationErrors(errors)
+              senderToReturn ! ValidationErrors(LeagueErrorWrapper(errors))
             case Failure(ex) =>
               log.error(s"An error occurred while creating a league $league: $ex")
               senderToReturn ! InternalServerError
@@ -126,8 +127,8 @@ class LeagueService(
             case _ => List()
           }
           val errors: List[LeagueError] = list.flatMap {
-            case LeagueValidationErrors(errors) => errors
-            case _                              => List()
+            case ValidationErrors(LeagueErrorWrapper(errors)) => errors
+            case _                                            => List()
           }
           log.info(s"Leagues $leagues added successfully")
           log.info(s"Other leagues aren't added because of: ${errors.mkString("[", ", ", "]")}")
@@ -157,7 +158,7 @@ class LeagueService(
               senderToReturn ! result
             case Success(Left(errors)) =>
               log.info(s"League $league isn't updated because of: ${errors.mkString("[", ", ", "]")}")
-              senderToReturn ! LeagueValidationErrors(errors)
+              senderToReturn ! ValidationErrors(LeagueErrorWrapper(errors))
             case Failure(ex) =>
               log.error(s"An error occurred while updating a league $league: $ex")
               senderToReturn ! InternalServerError
@@ -175,7 +176,7 @@ class LeagueService(
           senderToReturn ! result
         case Failure(_: SQLIntegrityConstraintViolationException) =>
           log.info(s"A league with id = $id can't be deleted because it's a part of foreign key")
-          senderToReturn ! LeagueValidationErrors(List(LeagueForeignKey(id)))
+          senderToReturn ! ValidationErrors(LeagueErrorWrapper(List(LeagueForeignKey(id))))
         case Failure(ex) =>
           log.error(s"An error occurred while deleting a league with id = $id: $ex")
           senderToReturn ! InternalServerError
@@ -184,7 +185,7 @@ class LeagueService(
 
   private def logErrorsAndSend(sender: ActorRef, leagueDto: LeagueApiDto, errors: List[LeagueError]): Unit = {
     log.info(s"Validation of league = $leagueDto failed because of: ${errors.mkString("[", ", ", "]")}")
-    sender ! LeagueValidationErrors(errors)
+    sender ! ValidationErrors(LeagueErrorWrapper(errors))
   }
 
   private def validateLeagueDuplicatesOnCreate(league: League): Future[List[LeagueError]] = for {
@@ -235,6 +236,6 @@ object LeagueService {
   case class AddAllLeagues(leagueDtoList: List[LeagueApiDto])
 
   case class AllFoundLeagues(leagues: List[LeagueApiDto])
-  case class LeagueValidationErrors(errors: List[LeagueError])
+  case class LeagueErrorWrapper(override val errors: List[LeagueError]) extends ErrorWrapper
   case class AllLeaguesAdded(leagues: List[LeagueApiDto], errors: List[LeagueError])
 }

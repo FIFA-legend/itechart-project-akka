@@ -75,7 +75,7 @@ class RefereeRouter(refereeService: ActorRef)(implicit timeout: Timeout, ec: Exe
                 val responseFuture = (refereeService ? AddOneEntity(refereeDto)).map {
                   case OneEntityAdded(referee: RefereeApiDto) =>
                     HttpResponse(status = StatusCodes.Created, entity = referee.toJson.prettyPrint)
-                  case RefereeValidationErrors(errors) =>
+                  case ValidationErrors(RefereeErrorWrapper(errors)) =>
                     Utils.responseBadRequestWithBody(errors.map(_.message))
                   case InternalServerError =>
                     HttpResponse(status = StatusCodes.InternalServerError)
@@ -91,7 +91,7 @@ class RefereeRouter(refereeService: ActorRef)(implicit timeout: Timeout, ec: Exe
                 HttpResponse(status = StatusCodes.NotFound)
               case UpdateCompleted =>
                 Utils.responseOk()
-              case RefereeValidationErrors(errors) =>
+              case ValidationErrors(RefereeErrorWrapper(errors)) =>
                 Utils.responseBadRequestWithBody(errors.map(_.message))
               case InternalServerError =>
                 HttpResponse(status = StatusCodes.InternalServerError)
@@ -106,7 +106,7 @@ class RefereeRouter(refereeService: ActorRef)(implicit timeout: Timeout, ec: Exe
                 Utils.responseBadRequest()
               case RemoveCompleted =>
                 Utils.responseOk()
-              case RefereeValidationErrors(errors) =>
+              case ValidationErrors(RefereeErrorWrapper(errors)) =>
                 Utils.responseBadRequestWithBody(errors.map(_.message))
               case InternalServerError =>
                 HttpResponse(status = StatusCodes.InternalServerError)

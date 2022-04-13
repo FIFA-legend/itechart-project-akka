@@ -2,9 +2,7 @@ package com.itechart.project.service.domain_errors
 
 object CountryErrors {
 
-  sealed trait CountryError {
-    def message: String
-  }
+  sealed trait CountryError extends DomainError
 
   object CountryError {
     final case class InvalidCountryName(name: String) extends CountryError {
@@ -13,7 +11,8 @@ object CountryErrors {
     }
 
     final case class DuplicateCountryName(name: String) extends CountryError {
-      override def message: String = s"Duplicate country name `$name`. Country name must be unique"
+      override def message: String =
+        s"Duplicate country name `$name`. Country name must be unique"
     }
 
     final case class InvalidCountryCode(code: String) extends CountryError {
@@ -22,7 +21,8 @@ object CountryErrors {
     }
 
     final case class DuplicateCountryCode(code: String) extends CountryError {
-      override def message: String = s"Duplicate country code `$code`. Country code must be unique"
+      override def message: String =
+        s"Duplicate country code `$code`. Country code must be unique"
     }
 
     final case class InvalidCountryContinent(continent: String) extends CountryError {
@@ -31,7 +31,8 @@ object CountryErrors {
     }
 
     final case class CountryForeignKey(id: Int) extends CountryError {
-      override def message: String = s"Country with id `$id` can't be deleted because it's a part of foreign key"
+      override def message: String =
+        s"Country with id `$id` can't be deleted because it's a part of foreign key"
     }
   }
 

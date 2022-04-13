@@ -42,7 +42,7 @@ class MatchStatsRouter(matchStatsService: ActorRef)(implicit timeout: Timeout, e
               val responseFuture = (matchStatsService ? AddOneEntity(matchStatsDto)).map {
                 case OneEntityAdded(matchStats: MatchStatsApiDto) =>
                   HttpResponse(status = StatusCodes.Created, entity = matchStats.toJson.prettyPrint)
-                case MatchStatsValidationErrors(errors) =>
+                case ValidationErrors(MatchStatsErrorWrapper(errors)) =>
                   Utils.responseBadRequestWithBody(errors.map(_.message))
                 case InternalServerError =>
                   HttpResponse(status = StatusCodes.InternalServerError)
@@ -58,7 +58,7 @@ class MatchStatsRouter(matchStatsService: ActorRef)(implicit timeout: Timeout, e
                 HttpResponse(status = StatusCodes.NotFound)
               case UpdateCompleted =>
                 Utils.responseOk()
-              case MatchStatsValidationErrors(errors) =>
+              case ValidationErrors(MatchStatsErrorWrapper(errors)) =>
                 Utils.responseBadRequestWithBody(errors.map(_.message))
               case InternalServerError =>
                 HttpResponse(status = StatusCodes.InternalServerError)
@@ -73,7 +73,7 @@ class MatchStatsRouter(matchStatsService: ActorRef)(implicit timeout: Timeout, e
                 Utils.responseBadRequest()
               case RemoveCompleted =>
                 Utils.responseOk()
-              case MatchStatsValidationErrors(errors) =>
+              case ValidationErrors(MatchStatsErrorWrapper(errors)) =>
                 Utils.responseBadRequestWithBody(errors.map(_.message))
               case InternalServerError =>
                 HttpResponse(status = StatusCodes.InternalServerError)

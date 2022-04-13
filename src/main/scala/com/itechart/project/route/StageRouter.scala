@@ -11,7 +11,7 @@ import com.itechart.project.dto.JsonConverters.StageJsonProtocol
 import com.itechart.project.dto.stage.StageApiDto
 import com.itechart.project.service.CommonServiceMessages.Requests._
 import com.itechart.project.service.CommonServiceMessages.Responses._
-import com.itechart.project.service.StageService.{AddAllStages, AllFoundStages, AllStagesAdded, StageValidationErrors}
+import com.itechart.project.service.StageService.{AddAllStages, AllFoundStages, AllStagesAdded, StageErrorWrapper}
 import spray.json._
 
 import scala.concurrent.ExecutionContext
@@ -40,7 +40,7 @@ class StageRouter(stageService: ActorRef)(implicit timeout: Timeout, ec: Executi
                 HttpResponse(status = StatusCodes.NotFound)
               case OneFoundEntity(Some(stage: StageApiDto)) =>
                 Utils.responseOkWithBody(stage)
-              case StageValidationErrors(errors) =>
+              case ValidationErrors(StageErrorWrapper(errors)) =>
                 Utils.responseBadRequestWithBody(errors.map(_.message))
               case InternalServerError =>
                 HttpResponse(status = StatusCodes.InternalServerError)
@@ -78,7 +78,7 @@ class StageRouter(stageService: ActorRef)(implicit timeout: Timeout, ec: Executi
                 val responseFuture = (stageService ? AddOneEntity(stageDto)).map {
                   case OneEntityAdded(stage: StageApiDto) =>
                     HttpResponse(status = StatusCodes.Created, entity = stage.toJson.prettyPrint)
-                  case StageValidationErrors(errors) =>
+                  case ValidationErrors(StageErrorWrapper(errors)) =>
                     Utils.responseBadRequestWithBody(errors.map(_.message))
                   case InternalServerError =>
                     HttpResponse(status = StatusCodes.InternalServerError)
@@ -94,7 +94,7 @@ class StageRouter(stageService: ActorRef)(implicit timeout: Timeout, ec: Executi
                 HttpResponse(status = StatusCodes.NotFound)
               case UpdateCompleted =>
                 Utils.responseOk()
-              case StageValidationErrors(errors) =>
+              case ValidationErrors(StageErrorWrapper(errors)) =>
                 Utils.responseBadRequestWithBody(errors.map(_.message))
               case InternalServerError =>
                 HttpResponse(status = StatusCodes.InternalServerError)
@@ -109,7 +109,7 @@ class StageRouter(stageService: ActorRef)(implicit timeout: Timeout, ec: Executi
                 Utils.responseBadRequest()
               case RemoveCompleted =>
                 Utils.responseOk()
-              case StageValidationErrors(errors) =>
+              case ValidationErrors(StageErrorWrapper(errors)) =>
                 Utils.responseBadRequestWithBody(errors.map(_.message))
               case InternalServerError =>
                 HttpResponse(status = StatusCodes.InternalServerError)

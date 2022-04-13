@@ -41,7 +41,7 @@ class VenueRouter(venueService: ActorRef)(implicit timeout: Timeout, ec: Executi
                 HttpResponse(status = StatusCodes.NotFound)
               case OneFoundEntity(Some(venue: VenueApiDto)) =>
                 Utils.responseOkWithBody(venue)
-              case VenueValidationErrors(errors) =>
+              case ValidationErrors(VenueErrorWrapper(errors)) =>
                 Utils.responseBadRequestWithBody(errors.map(_.message))
               case InternalServerError =>
                 HttpResponse(status = StatusCodes.InternalServerError)
@@ -50,7 +50,7 @@ class VenueRouter(venueService: ActorRef)(implicit timeout: Timeout, ec: Executi
           } ~
           parameter("city".as[String]) { city =>
             val responseFuture = (venueService ? GetVenuesByCity(city)).map {
-              case VenueValidationErrors(errors) =>
+              case ValidationErrors(VenueErrorWrapper(errors)) =>
                 Utils.responseBadRequestWithBody(errors.map(_.message))
               case AllFoundVenues(venues) =>
                 Utils.responseOkWithBody(venues)
@@ -99,7 +99,7 @@ class VenueRouter(venueService: ActorRef)(implicit timeout: Timeout, ec: Executi
                 val responseFuture = (venueService ? AddOneEntity(venueDto)).map {
                   case OneEntityAdded(venue: VenueApiDto) =>
                     HttpResponse(status = StatusCodes.Created, entity = venue.toJson.prettyPrint)
-                  case VenueValidationErrors(errors) =>
+                  case ValidationErrors(VenueErrorWrapper(errors)) =>
                     Utils.responseBadRequestWithBody(errors.map(_.message))
                   case InternalServerError =>
                     HttpResponse(status = StatusCodes.InternalServerError)
@@ -115,7 +115,7 @@ class VenueRouter(venueService: ActorRef)(implicit timeout: Timeout, ec: Executi
                 HttpResponse(status = StatusCodes.NotFound)
               case UpdateCompleted =>
                 Utils.responseOk()
-              case VenueValidationErrors(errors) =>
+              case ValidationErrors(VenueErrorWrapper(errors)) =>
                 Utils.responseBadRequestWithBody(errors.map(_.message))
               case InternalServerError =>
                 HttpResponse(status = StatusCodes.InternalServerError)
@@ -130,7 +130,7 @@ class VenueRouter(venueService: ActorRef)(implicit timeout: Timeout, ec: Executi
                 Utils.responseBadRequest()
               case RemoveCompleted =>
                 Utils.responseOk()
-              case VenueValidationErrors(errors) =>
+              case ValidationErrors(VenueErrorWrapper(errors)) =>
                 Utils.responseBadRequestWithBody(errors.map(_.message))
               case InternalServerError =>
                 HttpResponse(status = StatusCodes.InternalServerError)

@@ -2,9 +2,7 @@ package com.itechart.project.service.domain_errors
 
 object TeamErrors {
 
-  sealed trait TeamError {
-    def message: String
-  }
+  sealed trait TeamError extends DomainError
 
   object TeamError {
     final case class InvalidTeamFullName(name: String) extends TeamError {
@@ -28,7 +26,8 @@ object TeamErrors {
     }
 
     final case class TeamForeignKey(id: Int) extends TeamError {
-      override def message: String = s"Team with id `$id` can't be deleted because it's a part of foreign key"
+      override def message: String =
+        s"Team with id `$id` can't be deleted because it's a part of foreign key"
     }
   }
 

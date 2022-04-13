@@ -41,7 +41,7 @@ class SeasonRouter(seasonService: ActorRef)(implicit timeout: Timeout, ec: Execu
                 HttpResponse(status = StatusCodes.NotFound)
               case OneFoundEntity(Some(season: SeasonApiDto)) =>
                 Utils.responseOkWithBody(season)
-              case SeasonValidationErrors(errors) =>
+              case ValidationErrors(SeasonErrorWrapper(errors)) =>
                 Utils.responseBadRequestWithBody(errors.map(_.message))
               case InternalServerError =>
                 HttpResponse(status = StatusCodes.InternalServerError)
@@ -79,7 +79,7 @@ class SeasonRouter(seasonService: ActorRef)(implicit timeout: Timeout, ec: Execu
                 val responseFuture = (seasonService ? AddOneEntity(seasonDto)).map {
                   case OneEntityAdded(season: SeasonApiDto) =>
                     HttpResponse(status = StatusCodes.Created, entity = season.toJson.prettyPrint)
-                  case SeasonValidationErrors(errors) =>
+                  case ValidationErrors(SeasonErrorWrapper(errors)) =>
                     Utils.responseBadRequestWithBody(errors.map(_.message))
                   case InternalServerError =>
                     HttpResponse(status = StatusCodes.InternalServerError)
@@ -95,7 +95,7 @@ class SeasonRouter(seasonService: ActorRef)(implicit timeout: Timeout, ec: Execu
                 HttpResponse(status = StatusCodes.NotFound)
               case UpdateCompleted =>
                 Utils.responseOk()
-              case SeasonValidationErrors(errors) =>
+              case ValidationErrors(SeasonErrorWrapper(errors)) =>
                 Utils.responseBadRequestWithBody(errors.map(_.message))
               case InternalServerError =>
                 HttpResponse(status = StatusCodes.InternalServerError)
@@ -110,7 +110,7 @@ class SeasonRouter(seasonService: ActorRef)(implicit timeout: Timeout, ec: Execu
                 Utils.responseBadRequest()
               case RemoveCompleted =>
                 Utils.responseOk()
-              case SeasonValidationErrors(errors) =>
+              case ValidationErrors(SeasonErrorWrapper(errors)) =>
                 Utils.responseBadRequestWithBody(errors.map(_.message))
               case InternalServerError =>
                 HttpResponse(status = StatusCodes.InternalServerError)
