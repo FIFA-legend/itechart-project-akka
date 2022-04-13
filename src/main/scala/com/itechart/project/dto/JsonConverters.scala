@@ -3,6 +3,7 @@ package com.itechart.project.dto
 import com.itechart.project.dto.country.CountryApiDto
 import com.itechart.project.dto.formation.FormationApiDto
 import com.itechart.project.dto.league.LeagueApiDto
+import com.itechart.project.dto.match_stats.MatchStatsApiDto
 import com.itechart.project.dto.player.PlayerApiDto
 import com.itechart.project.dto.referee.RefereeApiDto
 import com.itechart.project.dto.season.SeasonApiDto
@@ -65,6 +66,64 @@ object JsonConverters {
         "league_id"  -> JsNumber(league.id),
         "country_id" -> JsNumber(league.countryId),
         "name"       -> JsString(league.name)
+      )
+    }
+  }
+
+  trait MatchStatsJsonProtocol extends DefaultJsonProtocol {
+    implicit object MatchStatsJsonFormat extends RootJsonFormat[MatchStatsApiDto] {
+      override def read(value: JsValue): MatchStatsApiDto = {
+        value.asJsObject.getFields(
+          "match_stats_id",
+          "ht_home_team_score",
+          "ht_away_team_score",
+          "ft_home_team_score",
+          "ft_away_team_score",
+          "et_home_team_score",
+          "et_away_team_score",
+          "p_home_team_score",
+          "p_away_team_score",
+          "attendance"
+        ) match {
+          case Seq(
+                JsNumber(id),
+                htHome:     JsValue,
+                htAway:     JsValue,
+                ftHome:     JsValue,
+                ftAway:     JsValue,
+                etHome:     JsValue,
+                etAway:     JsValue,
+                pHome:      JsValue,
+                pAway:      JsValue,
+                attendance: JsValue
+              ) =>
+            MatchStatsApiDto(
+              id.toLong,
+              jsValueToOptionInt(htHome),
+              jsValueToOptionInt(htAway),
+              jsValueToOptionInt(ftHome),
+              jsValueToOptionInt(ftAway),
+              jsValueToOptionInt(etHome),
+              jsValueToOptionInt(etAway),
+              jsValueToOptionInt(pHome),
+              jsValueToOptionInt(pAway),
+              jsValueToOptionInt(attendance)
+            )
+          case _ => throw DeserializationException("Match stats expected")
+        }
+      }
+
+      override def write(matchStats: MatchStatsApiDto): JsValue = JsObject(
+        "match_stats_id"     -> JsNumber(matchStats.id),
+        "ht_home_team_score" -> optionIntToJsValue(matchStats.htHomeTeamScore),
+        "ht_away_team_score" -> optionIntToJsValue(matchStats.htAwayTeamScore),
+        "ft_home_team_score" -> optionIntToJsValue(matchStats.ftHomeTeamScore),
+        "ft_away_team_score" -> optionIntToJsValue(matchStats.ftAwayTeamScore),
+        "et_home_team_score" -> optionIntToJsValue(matchStats.etHomeTeamScore),
+        "et_away_team_score" -> optionIntToJsValue(matchStats.etAwayTeamScore),
+        "p_home_team_score"  -> optionIntToJsValue(matchStats.pHomeTeamScore),
+        "p_away_team_score"  -> optionIntToJsValue(matchStats.pAwayTeamScore),
+        "attendance"         -> optionIntToJsValue(matchStats.attendance)
       )
     }
   }
