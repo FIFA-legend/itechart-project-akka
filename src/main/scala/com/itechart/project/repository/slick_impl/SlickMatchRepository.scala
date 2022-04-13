@@ -7,6 +7,7 @@ import com.itechart.project.repository.slick_impl.Tables._
 import slick.jdbc.MySQLProfile
 import slick.jdbc.MySQLProfile.api._
 
+import java.time.LocalDate
 import scala.concurrent.{ExecutionContext, Future}
 
 class SlickMatchRepository(db: MySQLProfile.backend.Database)(implicit ec: ExecutionContext) extends MatchRepository {
@@ -19,6 +20,11 @@ class SlickMatchRepository(db: MySQLProfile.backend.Database)(implicit ec: Execu
   override def findById(id: MatchId): Future[Option[Match]] = {
     val matchByIdQuery = matchTable.filter(_.id === id)
     db.run[Seq[Match]](matchByIdQuery.result).map(_.headOption)
+  }
+
+  override def findByDate(date: LocalDate): Future[List[Match]] = {
+    val matchesByDateQuery = matchTable.filter(_.startDate === date)
+    db.run[Seq[Match]](matchesByDateQuery.result).map(_.toList)
   }
 
   override def create(footballMatch: Match): Future[MatchId] = {

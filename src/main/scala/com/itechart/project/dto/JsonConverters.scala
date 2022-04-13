@@ -1,6 +1,7 @@
 package com.itechart.project.dto
 
 import com.itechart.project.dto.country.CountryApiDto
+import com.itechart.project.dto.football_match.MatchApiDto
 import com.itechart.project.dto.formation.FormationApiDto
 import com.itechart.project.dto.league.LeagueApiDto
 import com.itechart.project.dto.match_stats.MatchStatsApiDto
@@ -12,7 +13,7 @@ import com.itechart.project.dto.team.TeamApiDto
 import com.itechart.project.dto.venue.VenueApiDto
 import spray.json._
 
-import java.time.LocalDate
+import java.time.{LocalDate, LocalTime}
 
 object JsonConverters {
 
@@ -66,6 +67,80 @@ object JsonConverters {
         "league_id"  -> JsNumber(league.id),
         "country_id" -> JsNumber(league.countryId),
         "name"       -> JsString(league.name)
+      )
+    }
+  }
+
+  trait MatchJsonProtocol extends DefaultJsonProtocol {
+    implicit object MatchJsonFormat extends RootJsonFormat[MatchApiDto] {
+      override def read(value: JsValue): MatchApiDto = {
+        value.asJsObject.getFields(
+          "match_id",
+          "season_id",
+          "league_id",
+          "stage_id",
+          "status",
+          "start_date",
+          "start_time",
+          "home_team_id",
+          "away_team_id",
+          "venue_id",
+          "referee_id",
+          "match_stats_id",
+          "home_team_formation_id",
+          "away_team_formation_id"
+        ) match {
+          case Seq(
+                JsNumber(id),
+                JsNumber(seasonId),
+                JsNumber(leagueId),
+                JsNumber(stageId),
+                JsString(status),
+                JsString(startDate),
+                JsString(startTime),
+                JsNumber(homeTeamId),
+                JsNumber(awayTeamId),
+                JsNumber(venueId),
+                JsNumber(refereeId),
+                JsNumber(matchStatsId),
+                JsNumber(homeTeamFormationId),
+                JsNumber(awayTeamFormationId)
+              ) =>
+            MatchApiDto(
+              id.toLong,
+              seasonId.toInt,
+              leagueId.toInt,
+              stageId.toInt,
+              status,
+              LocalDate.parse(startDate),
+              LocalTime.parse(startTime),
+              homeTeamId.toInt,
+              awayTeamId.toInt,
+              venueId.toInt,
+              refereeId.toInt,
+              matchStatsId.toLong,
+              homeTeamFormationId.toInt,
+              awayTeamFormationId.toInt
+            )
+          case _ => throw DeserializationException("League expected")
+        }
+      }
+
+      override def write(footballMatch: MatchApiDto): JsValue = JsObject(
+        "match_id"               -> JsNumber(footballMatch.id),
+        "season_id"              -> JsNumber(footballMatch.seasonId),
+        "league_id"              -> JsNumber(footballMatch.leagueId),
+        "stage_id"               -> JsNumber(footballMatch.stageId),
+        "status"                 -> JsString(footballMatch.status),
+        "start_date"             -> JsString(footballMatch.startDate.toString),
+        "start_time"             -> JsString(footballMatch.startTime.toString),
+        "home_team_id"           -> JsNumber(footballMatch.homeTeamId),
+        "away_team_id"           -> JsNumber(footballMatch.awayTeamId),
+        "venue_id"               -> JsNumber(footballMatch.venueId),
+        "referee_id"             -> JsNumber(footballMatch.refereeId),
+        "match_stats_id"         -> JsNumber(footballMatch.matchStatsId),
+        "home_team_formation_id" -> JsNumber(footballMatch.homeTeamFormationId),
+        "away_team_formation_id" -> JsNumber(footballMatch.awayTeamFormationId)
       )
     }
   }
