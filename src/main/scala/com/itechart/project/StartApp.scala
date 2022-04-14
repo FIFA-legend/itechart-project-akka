@@ -10,6 +10,7 @@ import com.itechart.project.https.HttpsContext
 import com.itechart.project.https.HttpsContext.HttpsConfiguration
 import com.itechart.project.repository._
 import com.itechart.project.route._
+import com.itechart.project.service.JwtAuthorizationService.JwtConfiguration
 import com.itechart.project.service._
 import io.circe.config.parser
 
@@ -27,10 +28,12 @@ object StartApp extends App {
     parser.decodePath[DatabaseConfiguration]("database-settings")
   val httpsSettingsEither: Either[Throwable, HttpsConfiguration] =
     parser.decodePath[HttpsConfiguration]("https-settings")
+  val jwtSettingsEither: Either[Throwable, JwtConfiguration] =
+    parser.decodePath[JwtConfiguration]("jwt-settings")
 
-  (databaseSettingsEither, httpsSettingsEither) match {
-    case (Right(databaseConfiguration), Right(httpsSettings)) =>
-      val httpsConnectionContext = HttpsContext.httpsContext(httpsSettings)
+  (databaseSettingsEither, httpsSettingsEither, jwtSettingsEither) match {
+    case (Right(databaseConfiguration), Right(httpsConfiguration), Right(jwtConfiguration)) =>
+      val httpsConnectionContext = HttpsContext.httpsContext(httpsConfiguration)
       val migrator               = DatabaseSettings.migrator(databaseConfiguration)
       migrator.migrate()
 
@@ -47,6 +50,10 @@ object StartApp extends App {
       val stageRepository      = StageRepository.of(db)
       val teamRepository       = TeamRepository.of(db)
       val venueRepository      = VenueRepository.of(db)
+      val userRepository       = UserRepository.of(db)
+
+      val jwtAuthorizationService =
+        system.actorOf(JwtAuthorizationService.props(userRepository, jwtConfiguration), "authorizationService")
 
       val countryService   = system.actorOf(CountryService.props(countryRepository), "countryService")
       val formationService = system.actorOf(FormationService.props(formationRepository), "formationService")
@@ -94,7 +101,7 @@ object StartApp extends App {
         .enableHttps(httpsConnectionContext)
         .bind(routes)
 
-    case (_, _) =>
+    case (_, _, _) =>
       println("Some errors in configuration")
   }
 
