@@ -6,6 +6,8 @@ import akka.http.scaladsl.server.Directives._
 import akka.util.Timeout
 import com.itechart.project.configuration.ConfigurationTypes.DatabaseConfiguration
 import com.itechart.project.configuration.DatabaseSettings
+import com.itechart.project.https.HttpsContext
+import com.itechart.project.https.HttpsContext.HttpsConfiguration
 import com.itechart.project.repository._
 import com.itechart.project.route._
 import com.itechart.project.service._
@@ -23,11 +25,13 @@ object StartApp extends App {
 
   val databaseSettingsEither: Either[Throwable, DatabaseConfiguration] =
     parser.decodePath[DatabaseConfiguration]("database-settings")
+  val httpsSettingsEither: Either[Throwable, HttpsConfiguration] =
+    parser.decodePath[HttpsConfiguration]("https-settings")
 
-  databaseSettingsEither match {
-    case Left(ex) => throw ex
-    case Right(databaseConfiguration) =>
-      val migrator = DatabaseSettings.migrator(databaseConfiguration)
+  (databaseSettingsEither, httpsSettingsEither) match {
+    case (Right(databaseConfiguration), Right(httpsSettings)) =>
+      val httpsConnectionContext = HttpsContext.httpsContext(httpsSettings)
+      val migrator               = DatabaseSettings.migrator(databaseConfiguration)
       migrator.migrate()
 
       val db = DatabaseSettings.connection(databaseConfiguration)
@@ -80,13 +84,18 @@ object StartApp extends App {
       val teamRouter       = new TeamRouter(teamService)
       val venueRouter      = new VenueRouter(venueService)
 
+      val routes = countryRouter.countryRoutes ~ formationRouter.formationRoutes ~ leagueRouter.leagueRoutes ~
+        matchRouter.matchRoutes ~ matchStatsRouter.matchStatsRoutes ~ playerRouter.playerRoutes ~
+        refereeRouter.refereeRoutes ~ seasonRouter.seasonRoutes ~ stageRouter.stageRoutes ~
+        teamRouter.teamRoutes ~ venueRouter.venueRoutes
+
       Http()
         .newServerAt("localhost", 8080)
-        .bind(
-          countryRouter.countryRoutes ~ formationRouter.formationRoutes ~ leagueRouter.leagueRoutes ~ matchRouter.matchRoutes ~
-            matchStatsRouter.matchStatsRoutes ~ playerRouter.playerRoutes ~ refereeRouter.refereeRoutes ~
-            seasonRouter.seasonRoutes ~ stageRouter.stageRoutes ~ teamRouter.teamRoutes ~ venueRouter.venueRoutes
-        )
+        .enableHttps(httpsConnectionContext)
+        .bind(routes)
+
+    case (_, _) =>
+      println("Some errors in configuration")
   }
 
 }
