@@ -97,6 +97,12 @@ class JwtAuthorizationService(
       case Success(claims) => Role.withName(claims.content.split(":")(1).strip())
       case Failure(_)      => Role.User
     }
+
+  private def getUsername(token: String): String =
+    JwtSprayJson.decode(token, jwtConfiguration.secret, Seq(algorithm)) match {
+      case Success(claims) => claims.content.split(":")(0).strip()
+      case Failure(_)      => ""
+    }
 }
 
 object JwtAuthorizationService {
@@ -108,13 +114,15 @@ object JwtAuthorizationService {
   case object LoginNotFound
   case object PasswordMismatch
 
+  trait TokenValidationStatus
   case class ValidateToken(token: String)
-  case object ValidToken
-  case object InvalidToken
+  case object ValidToken extends TokenValidationStatus
+  case object InvalidToken extends TokenValidationStatus
 
+  trait TokenExpirationStatus
   case class TokenExpiration(token: String)
-  case object TokenExpired
-  case object TokenNotExpired
+  case object TokenExpired extends TokenExpirationStatus
+  case object TokenNotExpired extends TokenExpirationStatus
 
   case class TokenRole(token: String)
   case class TokenRoleResult(role: Role)

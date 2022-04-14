@@ -10,6 +10,7 @@ import com.itechart.project.dto.referee.RefereeApiDto
 import com.itechart.project.dto.season.SeasonApiDto
 import com.itechart.project.dto.stage.StageApiDto
 import com.itechart.project.dto.team.TeamApiDto
+import com.itechart.project.dto.user.{CreateUserApiDto, UpdateUserApiDto, UserApiDto}
 import com.itechart.project.dto.venue.VenueApiDto
 import spray.json._
 
@@ -331,6 +332,45 @@ object JsonConverters {
         "logo"       -> optionStringToJsValue(team.logo),
         "country_id" -> JsNumber(team.countryId)
       )
+    }
+  }
+
+  trait UserJsonProtocol extends DefaultJsonProtocol {
+    implicit object UserJsonFormat extends RootJsonFormat[UserApiDto] {
+      override def write(user: UserApiDto): JsValue = JsObject(
+        "user_id" -> JsNumber(user.id),
+        "login"   -> JsString(user.login),
+        "email"   -> JsString(user.email),
+        "role"    -> JsString(user.role)
+      )
+
+      override def read(value: JsValue): UserApiDto = {
+        value.asJsObject.getFields("user_id", "login", "email", "role") match {
+          case Seq(JsNumber(id), JsString(login), JsString(email), JsString(role)) =>
+            UserApiDto(id.toLong, login, email, role)
+          case _ => throw DeserializationException("User expected")
+        }
+      }
+    }
+
+    implicit object CreateUserJsonFormat extends RootJsonReader[CreateUserApiDto] {
+      override def read(value: JsValue): CreateUserApiDto = {
+        value.asJsObject.getFields("login", "password", "email") match {
+          case Seq(JsString(login), JsString(password), JsString(email)) =>
+            CreateUserApiDto(login, password, email)
+          case _ => throw DeserializationException("User expected")
+        }
+      }
+    }
+
+    implicit object UpdateUserJsonFormat extends RootJsonReader[UpdateUserApiDto] {
+      override def read(value: JsValue): UpdateUserApiDto = {
+        value.asJsObject.getFields("user_id", "password", "email", "role") match {
+          case Seq(JsNumber(id), JsString(password), JsString(email), JsString(role)) =>
+            UpdateUserApiDto(id.toLong, password, email, role)
+          case _ => throw DeserializationException("User expected")
+        }
+      }
     }
   }
 

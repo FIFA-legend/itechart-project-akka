@@ -49,8 +49,8 @@ object StartApp extends App {
       val seasonRepository     = SeasonRepository.of(db)
       val stageRepository      = StageRepository.of(db)
       val teamRepository       = TeamRepository.of(db)
-      val venueRepository      = VenueRepository.of(db)
       val userRepository       = UserRepository.of(db)
+      val venueRepository      = VenueRepository.of(db)
 
       val jwtAuthorizationService =
         system.actorOf(JwtAuthorizationService.props(userRepository, jwtConfiguration), "authorizationService")
@@ -77,6 +77,7 @@ object StartApp extends App {
       val seasonService     = system.actorOf(SeasonService.props(seasonRepository), "seasonService")
       val stageService      = system.actorOf(StageService.props(stageRepository), "stageService")
       val teamService       = system.actorOf(TeamService.props(teamRepository, countryRepository), "teamService")
+      val userService       = system.actorOf(UserService.props(userRepository), "userService")
       val venueService      = system.actorOf(VenueService.props(venueRepository, countryRepository), "venueRepository")
 
       val countryRouter    = new CountryRouter(countryService)
@@ -89,12 +90,13 @@ object StartApp extends App {
       val seasonRouter     = new SeasonRouter(seasonService)
       val stageRouter      = new StageRouter(stageService)
       val teamRouter       = new TeamRouter(teamService)
+      val userRouter       = new UserRouter(userService, jwtAuthorizationService)
       val venueRouter      = new VenueRouter(venueService)
 
       val routes = countryRouter.countryRoutes ~ formationRouter.formationRoutes ~ leagueRouter.leagueRoutes ~
         matchRouter.matchRoutes ~ matchStatsRouter.matchStatsRoutes ~ playerRouter.playerRoutes ~
         refereeRouter.refereeRoutes ~ seasonRouter.seasonRoutes ~ stageRouter.stageRoutes ~
-        teamRouter.teamRoutes ~ venueRouter.venueRoutes
+        teamRouter.teamRoutes ~ userRouter.userRoutes ~ venueRouter.venueRoutes
 
       Http()
         .newServerAt("localhost", 8080)

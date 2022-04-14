@@ -24,6 +24,7 @@ object CommonServiceMessages {
     case object UpdateFailed
     case object RemoveCompleted
     case object RemoveFailed
+    case object NotEnoughRights
     case object InternalServerError
   }
 
