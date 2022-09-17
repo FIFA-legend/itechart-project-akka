@@ -1,0 +1,15 @@
+version: '3'
+services:
+  mysql:
+    image: mysql:8.0.28
+    ports:
+      - "3306:3306"
+    environment:
+      - MYSQL_ROOT_PASSWORD=0987654321KnKn
+      - MYSQL_DATABASE=football_statistics
+    volumes:
+      - mysql-volume:/var/lib/mysql
+
+volumes:
+  mysql-volume:
+    driver: local

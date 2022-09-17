@@ -26,7 +26,7 @@ object Main {
     countryRepository
       .create(
         Country(
-          CountryId(1L),
+          CountryId(1),
           "England",
           "en",
           Europe

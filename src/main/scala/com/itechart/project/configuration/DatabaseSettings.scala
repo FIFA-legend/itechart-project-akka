@@ -19,7 +19,8 @@ object DatabaseSettings {
       Flyway
         .configure()
         .dataSource(configuration.url, configuration.user, configuration.password)
-        .locations(s"${configuration.migrationLocation}" + File.separator + s"${configuration.provider}")
+        .locations(s"src/main/resources/${configuration.migrationLocation}/${configuration.provider}")
+        .baselineOnMigrate(true)
         .load()
     }
   }

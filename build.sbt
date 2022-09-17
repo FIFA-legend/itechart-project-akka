@@ -51,8 +51,9 @@ libraryDependencies ++= Seq(
   // MySQL connector
   "mysql" % "mysql-connector-java" % mySqlVersion,
   // database migrator
-  "org.flywaydb" % "flyway-core" % flywayVersion,
-  // Slick
+  "org.flywaydb" % "flyway-core"  % flywayVersion,
+  "org.flywaydb" % "flyway-mysql" % flywayVersion,
+// Slick
   "com.typesafe.slick" %% "slick"          % slickVersion,
   "com.typesafe.slick" %% "slick-hikaricp" % slickVersion,
   "com.typesafe.slick" %% "slick-codegen"  % slickVersion,
