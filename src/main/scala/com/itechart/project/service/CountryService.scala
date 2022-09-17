@@ -1,14 +1,11 @@
 package com.itechart.project.service
 
-import akka.actor.{Actor, ActorLogging, ActorRef, Props}
-import akka.pattern.ask
+import akka.actor.{Actor, ActorLogging, Props}
+import akka.pattern.pipe
 import akka.util.Timeout
 import com.itechart.project.domain.country.{Continent, Country, CountryId}
 import com.itechart.project.dto.country.CountryApiDto
 import com.itechart.project.repository.CountryRepository
-import com.itechart.project.service.CommonServiceMessages.ErrorWrapper
-import com.itechart.project.service.CommonServiceMessages.Requests._
-import com.itechart.project.service.CommonServiceMessages.Responses._
 import com.itechart.project.service.domain_errors.CountryErrors.CountryError
 import com.itechart.project.service.domain_errors.CountryErrors.CountryError._
 import com.itechart.project.utils.RefinedConversions.validateParameter
@@ -17,7 +14,6 @@ import eu.timepit.refined.string.MatchesRegex
 
 import java.sql.SQLIntegrityConstraintViolationException
 import scala.concurrent.{ExecutionContext, Future}
-import scala.util.{Failure, Success}
 
 class CountryService(countryRepository: CountryRepository)(implicit ec: ExecutionContext, timeout: Timeout)
   extends Actor
@@ -25,196 +21,171 @@ class CountryService(countryRepository: CountryRepository)(implicit ec: Executio
   import CountryService._
 
   override def receive: Receive = {
-    case GetAllEntities =>
-      val senderToReturn = sender()
+    case ReadCountries =>
       log.info("Getting all countries from database")
-      val countriesFuture = countryRepository.findAll
-      countriesFuture.onComplete {
-        case Success(countries) =>
+      val countriesFuture = countryRepository.findAll.mapTo[List[Country]]
+      countriesFuture
+        .map { countries =>
           log.info(s"Got ${countries.size} countries out of database")
-          senderToReturn ! AllFoundCountries(countries.map(domainCountryToDtoCountry))
-        case Failure(ex) =>
-          log.error(s"An error occurred while extracting all countries out of database: $ex")
-          senderToReturn ! InternalServerError
-      }
+          ReadCountries(countries.map(domainCountryToDtoCountry))
+        }
+        .pipeTo(sender())
 
-    case GetEntityByT(id: Int) =>
-      val senderToReturn = sender()
+    case ReadCountryById(id) =>
       log.info(s"Getting country with id = $id")
-      val countryFuture = countryRepository.findById(CountryId(id))
-      countryFuture.onComplete {
-        case Success(maybeCountry) =>
-          log.info(s"Country with id = $id ${if (maybeCountry.isEmpty) "not "}found")
-          senderToReturn ! OneFoundEntity(maybeCountry.map(domainCountryToDtoCountry))
-        case Failure(ex) =>
-          log.error(s"An error occurred while extracting a country with id = $id: $ex")
-          senderToReturn ! InternalServerError
-      }
+      val countryFuture = countryRepository.findById(CountryId(id)).mapTo[Option[Country]]
+      countryFuture
+        .map {
+          case None =>
+            log.info(s"Country with id = $id not found")
+            CountryNotFound
+          case Some(country) =>
+            log.info(s"Country with id = $id is found: $country")
+            ReadCountry(domainCountryToDtoCountry(country))
+        }
+        .pipeTo(sender())
 
-    case GetEntityByT(name: String) =>
-      val senderToReturn = sender()
+    case ReadCountryByName(name) =>
       log.info(s"Getting country with name = $name")
-      val validatedNameEither =
+      val nameEither =
         validateParameter[CountryError, String, MatchesRegex[W.`"^[A-Z][A-Za-z]+$"`.T]](name, InvalidCountryName(name))
-      validatedNameEither match {
-        case Left(error) =>
-          log.info(s"Validation of name = $name failed")
-          senderToReturn ! ValidationErrors(CountryErrorWrapper(List(error)))
+      nameEither match {
+        case Left(countryError) =>
+          log.info(s"Validation of name = $name failed due to error: ${countryError.message}")
+          sender() ! ReadCountryError(countryError)
         case Right(validName) =>
           log.info(s"Extracting country with name = $name out of database")
-          val countryFuture = countryRepository.findByName(validName)
-          countryFuture.onComplete {
-            case Success(maybeCountry) =>
-              log.info(s"Country with name = $name ${if (maybeCountry.isEmpty) "not " else ""}found")
-              senderToReturn ! OneFoundEntity(maybeCountry.map(domainCountryToDtoCountry))
-            case Failure(ex) =>
-              log.error(s"An error occurred while extracting a country with name = $name: $ex")
-              senderToReturn ! InternalServerError
-          }
+          val countryFuture = countryRepository.findByName(validName).mapTo[Option[Country]]
+          countryFuture
+            .map {
+              case None =>
+                log.info(s"Country with name = $name not found")
+                CountryNotFound
+              case Some(country) =>
+                log.info(s"Country with name = $name is found: $country")
+                ReadCountry(domainCountryToDtoCountry(country))
+            }
+            .pipeTo(sender())
       }
 
-    case GetCountryByCode(code) =>
-      val senderToReturn = sender()
+    case ReadCountryByCode(code) =>
       log.info(s"Getting country with code = $code")
-      val validatedCodeEither =
+      val codeEither =
         validateParameter[CountryError, String, MatchesRegex[W.`"^[a-z]{2}$"`.T]](code, InvalidCountryCode(code))
-      validatedCodeEither match {
-        case Left(error) =>
-          log.info(s"Validation of code = $code failed")
-          senderToReturn ! ValidationErrors(CountryErrorWrapper(List(error)))
+      codeEither match {
+        case Left(countryError) =>
+          log.info(s"Validation of code = $code failed due to error: ${countryError.message}")
+          sender() ! ReadCountryError(countryError)
         case Right(validCode) =>
           log.info(s"Extracting country with code = $code out of database")
-          val countryFuture = countryRepository.findByCode(validCode)
-          countryFuture.onComplete {
-            case Success(maybeCountry) =>
-              log.info(s"Country with code = $code ${if (maybeCountry.isEmpty) "not " else ""}found")
-              senderToReturn ! OneFoundEntity(maybeCountry.map(domainCountryToDtoCountry))
-            case Failure(ex) =>
-              log.error(s"An error occurred while extracting a country with code = $code: $ex")
-              senderToReturn ! InternalServerError
-          }
+          val countryFuture = countryRepository.findByCode(validCode).mapTo[Option[Country]]
+          countryFuture
+            .map {
+              case None =>
+                log.info(s"Country with code = $code not found")
+                CountryNotFound
+              case Some(country) =>
+                log.info(s"Country with code = $code is found: $country")
+                ReadCountry(domainCountryToDtoCountry(country))
+            }
+            .pipeTo(sender())
       }
 
-    case AddOneEntity(countryDto: CountryApiDto) =>
-      val senderToReturn = sender()
-      log.info(s"Adding a country = $countryDto")
-      val validatedCountry = validateCountryDto(countryDto)
+    case CreateCountry(dtoCountry) =>
+      log.info(s"Creating a new country = $dtoCountry")
+      val validatedCountry = validateCountryDto(dtoCountry)
       validatedCountry match {
         case Left(errors) =>
-          logErrorsAndSend(senderToReturn, countryDto, errors)
+          log.info(s"Validation of country = $dtoCountry failed on creating due to: ${errors.mkString("[", ", ", "]")}")
+          sender() ! ReadCountryErrors(errors)
         case Right(country) =>
-          val countryIdOrErrors = for {
+          val countryOrErrors = for {
             errors    <- validateCountryDuplicatesOnCreate(country)
             countryId <- if (errors.isEmpty) countryRepository.create(country) else Future(CountryId(0))
-            result     = if (countryId.value == 0) Left(errors) else Right(countryId)
+            result =
+              if (countryId.value != 0) {
+                log.info(s"Country $country is successfully created")
+                ReadCountry(dtoCountry.copy(id = countryId.value))
+              } else {
+                log.info(s"Country $country isn't created due to: ${errors.mkString("[", ", ", "]")}")
+                ReadCountryErrors(errors)
+              }
           } yield result
-          countryIdOrErrors.onComplete {
-            case Success(Right(id)) =>
-              log.info(s"Country $country successfully created")
-              senderToReturn ! OneEntityAdded(countryDto.copy(id = id.value))
-            case Success(Left(errors)) =>
-              log.info(s"Country $country doesn't created because of: ${errors.mkString("[", ", ", "]")}")
-              senderToReturn ! ValidationErrors(CountryErrorWrapper(errors))
-            case Failure(ex) =>
-              log.error(s"An error occurred while creating a country $country: $ex")
-              senderToReturn ! InternalServerError
-          }
+          countryOrErrors.pipeTo(sender())
       }
 
-    case AddAllCountries(countryDtoList) =>
-      val senderToReturn = sender()
-      log.info(s"Adding countries $countryDtoList")
-      val addedCountries = Future.traverse(countryDtoList.map(self ? AddOneEntity(_)))(identity)
-      addedCountries.onComplete {
-        case Success(list) =>
-          val countries: List[CountryApiDto] = list.flatMap {
-            case OneEntityAdded(country: CountryApiDto) => List(country)
-            case _ => List()
-          }
-          val errors: List[CountryError] = list.flatMap {
-            case ValidationErrors(CountryErrorWrapper(errors)) => errors
-            case _                                             => List()
-          }
-          log.info(s"Countries $countries added successfully")
-          log.info(s"Other countries aren't added because of: ${errors.mkString("[", ", ", "]")}")
-          senderToReturn ! AllCountriesAdded(countries, errors)
-        case Failure(ex) =>
-          log.error(s"An error occurred while creating countries $countryDtoList: $ex")
-          senderToReturn ! InternalServerError
-      }
-
-    case UpdateEntity(countryDto: CountryApiDto) =>
-      val senderToReturn = sender()
-      log.info(s"Updating a country = $countryDto")
-      val validatedCountry = validateCountryDto(countryDto)
+    case UpdateCountry(dtoCountry) =>
+      log.info(s"Updating a country = $dtoCountry")
+      val validatedCountry = validateCountryDto(dtoCountry)
       validatedCountry match {
         case Left(errors) =>
-          logErrorsAndSend(senderToReturn, countryDto, errors)
+          log.info(s"Validation of country = $dtoCountry failed on updating due to: ${errors.mkString("[", ", ", "]")}")
+          sender() ! ReadCountryErrors(errors)
         case Right(country) =>
-          val rowsUpdatedOrErrors = for {
+          val countryOrErrors = for {
             errors      <- validateCountryDuplicatesOnUpdate(country)
             rowsUpdated <- if (errors.isEmpty) countryRepository.update(country) else Future(-1)
-            result       = if (rowsUpdated == -1) Left(errors) else Right(rowsUpdated)
+            result =
+              if (rowsUpdated != -1) {
+                log.info(s"Country $country is successfully updated")
+                ReadCountry(dtoCountry)
+              } else {
+                log.info(s"Country $country isn't updated due to: ${errors.mkString("[", ", ", "]")}")
+                ReadCountryErrors(errors)
+              }
           } yield result
-          rowsUpdatedOrErrors.onComplete {
-            case Success(Right(rowsUpdated)) =>
-              log.info(s"Country $country is ${if (rowsUpdated == 0) "not " else ""}updated")
-              val result = if (rowsUpdated == 0) UpdateFailed else UpdateCompleted
-              senderToReturn ! result
-            case Success(Left(errors)) =>
-              log.info(s"Country $country isn't updated because of: ${errors.mkString("[", ", ", "]")}")
-              senderToReturn ! ValidationErrors(CountryErrorWrapper(errors))
-            case Failure(ex) =>
-              log.error(s"An error occurred while updating a country $country: $ex")
-              senderToReturn ! InternalServerError
-          }
+          countryOrErrors.pipeTo(sender())
       }
 
-    case RemoveEntity(id: Int) =>
-      val senderToReturn = sender()
+    case DeleteCountry(id) =>
       log.info(s"Deleting country with id = $id")
-      val countryFuture = countryRepository.delete(CountryId(id))
-      countryFuture.onComplete {
-        case Success(rowsDeleted) =>
-          log.info(s"Country with id = $id ${if (rowsDeleted == 0) "not " else ""}deleted")
-          val result = if (rowsDeleted == 0) RemoveFailed else RemoveCompleted
-          senderToReturn ! result
-        case Failure(_: SQLIntegrityConstraintViolationException) =>
-          log.info(s"A country with id = $id can't be deleted because it's a part of foreign key")
-          senderToReturn ! ValidationErrors(CountryErrorWrapper(List(CountryForeignKey(id))))
-        case Failure(ex) =>
-          log.error(s"An error occurred while deleting a country with id = $id: $ex")
-          senderToReturn ! InternalServerError
-      }
+      val countryFuture = countryRepository.delete(CountryId(id)).mapTo[Int]
+      countryFuture
+        .map {
+          case 0 =>
+            log.info(s"Country with id = $id is not deleted")
+            CountryDeleteFailed
+          case i if i > 0 =>
+            log.info(s"Country with id = $id is deleted")
+            CountryDeleteCompleted
+        }
+        .recover { case _: SQLIntegrityConstraintViolationException =>
+          log.info(s"A country with id = $id isn't deleted because it's a part of foreign key")
+          ReadCountryError(CountryForeignKey(id))
+        }
+        .pipeTo(sender())
   }
 
-  private def logErrorsAndSend(sender: ActorRef, countryDto: CountryApiDto, errors: List[CountryError]): Unit = {
-    log.info(s"Validation of country = $countryDto failed because of: ${errors.mkString("[", ", ", "]")}")
-    sender ! ValidationErrors(CountryErrorWrapper(errors))
+  private def validateCountryDuplicatesOnCreate(country: Country): Future[List[CountryError]] = {
+    for {
+      duplicatedNameError <- countryRepository
+        .findByName(country.name)
+        .map {
+          case None    => List()
+          case Some(_) => List(DuplicateCountryName(country.name.value))
+        }
+      duplicatedCodeError <- countryRepository
+        .findByCode(country.countryCode)
+        .map {
+          case None    => List()
+          case Some(_) => List(DuplicateCountryCode(country.countryCode.value))
+        }
+    } yield duplicatedNameError ++ duplicatedCodeError
   }
-
-  private def validateCountryDuplicatesOnCreate(country: Country): Future[List[CountryError]] = for {
-    maybeCountryByName <- countryRepository.findByName(country.name)
-    maybeCountryByCode <- countryRepository.findByCode(country.countryCode)
-    duplicatedNameError <- Future(
-      if (maybeCountryByName.isEmpty) List() else List(DuplicateCountryName(country.name.value))
-    )
-    duplicatedCodeError <- Future(
-      if (maybeCountryByCode.isEmpty) List() else List(DuplicateCountryCode(country.countryCode.value))
-    )
-  } yield duplicatedNameError ++ duplicatedCodeError
 
   private def validateCountryDuplicatesOnUpdate(country: Country): Future[List[CountryError]] = for {
-    maybeCountryByName <- countryRepository.findByName(country.name)
-    maybeCountryByCode <- countryRepository.findByCode(country.countryCode)
-    duplicatedNameError <- Future(
-      if (maybeCountryByName.isEmpty || maybeCountryByName.head.id == country.id) List()
-      else List(DuplicateCountryName(country.name.value))
-    )
-    duplicatedCodeError <- Future(
-      if (maybeCountryByCode.isEmpty || maybeCountryByCode.head.id == country.id) List()
-      else List(DuplicateCountryCode(country.countryCode.value))
-    )
+    duplicatedNameError <- countryRepository
+      .findByName(country.name)
+      .map {
+        case None    => List()
+        case Some(c) => if (c.id == country.id) List() else List(DuplicateCountryName(country.name.value))
+      }
+    duplicatedCodeError <- countryRepository
+      .findByCode(country.countryCode)
+      .map {
+        case None    => List()
+        case Some(c) => if (c.id == country.id) List() else List(DuplicateCountryCode(country.countryCode.value))
+      }
   } yield duplicatedNameError ++ duplicatedCodeError
 
   private def validateCountryDto(countryDto: CountryApiDto): Either[List[CountryError], Country] = {
@@ -256,10 +227,21 @@ object CountryService {
   def props(countryRepository: CountryRepository)(implicit ec: ExecutionContext, timeout: Timeout): Props =
     Props(new CountryService(countryRepository))
 
-  case class GetCountryByCode(code: String)
-  case class AddAllCountries(countryDtoList: List[CountryApiDto])
+  case object ReadCountries
+  case class ReadCountryById(id: Int)
+  case class ReadCountryByName(name: String)
+  case class ReadCountryByCode(code: String)
+  case class CreateCountry(dtoCountry: CountryApiDto)
+  case class CreateCountries(dtoCountries: List[CountryApiDto])
+  case class UpdateCountry(dtoCountry: CountryApiDto)
+  case class DeleteCountry(id: Int)
 
-  case class AllFoundCountries(countries: List[CountryApiDto])
-  case class CountryErrorWrapper(override val errors: List[CountryError]) extends ErrorWrapper
-  case class AllCountriesAdded(countries: List[CountryApiDto], errors: List[CountryError])
+  case class ReadCountry(dtoCountry: CountryApiDto)
+  case class ReadCountries(dtoCountries: List[CountryApiDto])
+  case object CountryDeleteCompleted
+  case object CountryDeleteFailed
+
+  case object CountryNotFound
+  case class ReadCountryError(error: CountryError)
+  case class ReadCountryErrors(errors: List[CountryError])
 }

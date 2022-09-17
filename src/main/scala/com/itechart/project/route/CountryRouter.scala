@@ -9,8 +9,6 @@ import akka.pattern.ask
 import akka.util.Timeout
 import com.itechart.project.dto.JsonConverters.CountryJsonProtocol
 import com.itechart.project.dto.country.CountryApiDto
-import com.itechart.project.service.CommonServiceMessages.Requests._
-import com.itechart.project.service.CommonServiceMessages.Responses._
 import spray.json._
 
 import scala.concurrent.ExecutionContext
@@ -25,93 +23,79 @@ class CountryRouter(countryService: ActorRef)(implicit timeout: Timeout, ec: Exe
     pathPrefix("api" / "countries") {
       get {
         (path(IntNumber) | parameter("id".as[Int])) { id =>
-          val responseFuture = (countryService ? GetEntityByT(id)).map {
-            case OneFoundEntity(None) =>
+          val responseFuture = (countryService ? ReadCountryById(id)).map {
+            case CountryNotFound =>
               HttpResponse(status = StatusCodes.NotFound)
-            case OneFoundEntity(Some(country: CountryApiDto)) =>
+            case ReadCountry(country) =>
               Utils.responseOkWithBody(country)
-            case InternalServerError =>
-              HttpResponse(status = StatusCodes.InternalServerError)
           }
           complete(responseFuture)
         } ~
           parameter("name") { name =>
-            val responseFuture = (countryService ? GetEntityByT(name)).map {
-              case OneFoundEntity(None) =>
+            val responseFuture = (countryService ? ReadCountryByName(name)).map {
+              case CountryNotFound =>
                 HttpResponse(status = StatusCodes.NotFound)
-              case OneFoundEntity(Some(country: CountryApiDto)) =>
+              case ReadCountry(country) =>
                 Utils.responseOkWithBody(country)
-              case ValidationErrors(CountryErrorWrapper(errors)) =>
-                Utils.responseBadRequestWithBody(errors.map(_.message))
-              case InternalServerError =>
-                HttpResponse(status = StatusCodes.InternalServerError)
+              case ReadCountryError(error) =>
+                Utils.responseBadRequestWithBody(error.message)
             }
             complete(responseFuture)
           } ~
           parameter("code") { code =>
-            val responseFuture = (countryService ? GetCountryByCode(code)).map {
-              case OneFoundEntity(None) =>
+            val responseFuture = (countryService ? ReadCountryByCode(code)).map {
+              case CountryNotFound =>
                 HttpResponse(status = StatusCodes.NotFound)
-              case OneFoundEntity(Some(country: CountryApiDto)) =>
+              case ReadCountry(country) =>
                 Utils.responseOkWithBody(country)
-              case ValidationErrors(CountryErrorWrapper(errors)) =>
-                Utils.responseBadRequestWithBody(errors.map(_.message))
-              case InternalServerError =>
-                HttpResponse(status = StatusCodes.InternalServerError)
+              case ReadCountryError(error) =>
+                Utils.responseBadRequestWithBody(error.message)
             }
             complete(responseFuture)
           } ~
           pathEndOrSingleSlash {
-            val responseFuture = (countryService ? GetAllEntities).map {
-              case AllFoundCountries(countries) =>
-                Utils.responseOkWithBody(countries)
-              case InternalServerError =>
-                HttpResponse(status = StatusCodes.InternalServerError)
-            }
-            complete(responseFuture)
+            complete(
+              (countryService ? ReadCountries).mapTo[ReadCountries].map(_.dtoCountries)
+            )
           }
       } ~
         post {
-          path("all") {
-            entity(as[List[CountryApiDto]]) { countryDtoList =>
-              val responseFuture = (countryService ? AddAllCountries(countryDtoList)).map {
-                case AllCountriesAdded(countries, errors) =>
-                  val map = Map(
-                    "countries" -> countries.toJson.prettyPrint,
-                    "errors"    -> errors.map(_.message).mkString("[", ", ", "]")
-                  )
-                  Utils.responseOkWithBody(map)
-                case InternalServerError =>
-                  HttpResponse(status = StatusCodes.InternalServerError)
+          pathEndOrSingleSlash {
+            entity(as[CountryApiDto]) { countryDto =>
+              val responseFuture = (countryService ? CreateCountry(countryDto)).map {
+                case ReadCountry(country) =>
+                  HttpResponse(status = StatusCodes.Created, entity = country.toJson.prettyPrint)
+                case ReadCountryErrors(errors) =>
+                  Utils.responseBadRequestWithBody(errors.map(_.message))
               }
               complete(responseFuture)
             }
-          } ~
-            pathEndOrSingleSlash {
-              entity(as[CountryApiDto]) { countryDto =>
-                val responseFuture = (countryService ? AddOneEntity(countryDto)).map {
-                  case OneEntityAdded(country: CountryApiDto) =>
-                    HttpResponse(status = StatusCodes.Created, entity = country.toJson.prettyPrint)
-                  case ValidationErrors(CountryErrorWrapper(errors)) =>
-                    Utils.responseBadRequestWithBody(errors.map(_.message))
-                  case InternalServerError =>
-                    HttpResponse(status = StatusCodes.InternalServerError)
-                }
-                complete(responseFuture)
-              }
-            }
+          }
         } ~
         put {
           entity(as[CountryApiDto]) { countryDto =>
-            complete(Utils.responseOnEntityUpdate(countryService, countryDto))
+            val responseFuture = (countryService ? UpdateCountry(countryDto)).map {
+              case ReadCountry(country) =>
+                HttpResponse(entity = country.toJson.prettyPrint)
+              case ReadCountryErrors(errors) =>
+                Utils.responseBadRequestWithBody(errors.map(_.message))
+            }
+            complete(responseFuture)
           }
         } ~
         delete {
           path(IntNumber) { id =>
-            complete(Utils.responseOnEntityDelete(countryService, id))
+            val responseFuture = (countryService ? DeleteCountry(id)).map {
+              case CountryDeleteFailed =>
+                HttpResponse(status = StatusCodes.NotFound)
+              case CountryDeleteCompleted => HttpResponse()
+              case ReadCountryError(error) =>
+                Utils.responseBadRequestWithBody(error.message)
+            }
+            complete(responseFuture)
           }
         }
     }
-  }
 
+  }
 }
