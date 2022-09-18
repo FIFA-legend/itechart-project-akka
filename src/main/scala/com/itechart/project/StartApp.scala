@@ -3,6 +3,7 @@ package com.itechart.project
 import akka.actor.ActorSystem
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.server.Directives._
+import akka.routing.RoundRobinPool
 import akka.util.Timeout
 import com.itechart.project.configuration.ConfigurationTypes.DatabaseConfiguration
 import com.itechart.project.configuration.DatabaseSettings
@@ -52,33 +53,72 @@ object StartApp extends App {
       val userRepository       = UserRepository.of(db)
       val venueRepository      = VenueRepository.of(db)
 
-      val jwtAuthorizationService =
-        system.actorOf(JwtAuthorizationService.props(userRepository, jwtConfiguration), "authorizationService")
+      val numberOfActors = 5
+      val jwtAuthorizationService = system.actorOf(
+        RoundRobinPool(numberOfActors).props(JwtAuthorizationService.props(userRepository, jwtConfiguration)),
+        "authorizationService"
+      )
 
-      val countryService   = system.actorOf(CountryService.props(countryRepository), "countryService")
-      val formationService = system.actorOf(FormationService.props(formationRepository), "formationService")
-      val leagueService    = system.actorOf(LeagueService.props(leagueRepository, countryRepository), "leagueService")
+      val countryService =
+        system.actorOf(
+          RoundRobinPool(numberOfActors).props(CountryService.props(countryRepository)),
+          "countryService"
+        )
+      val formationService = system.actorOf(
+        RoundRobinPool(numberOfActors).props(FormationService.props(formationRepository)),
+        "formationService"
+      )
+      val leagueService = system.actorOf(
+        RoundRobinPool(numberOfActors).props(LeagueService.props(leagueRepository, countryRepository)),
+        "leagueService"
+      )
       val matchService = system.actorOf(
-        MatchService.props(
-          matchRepository,
-          seasonRepository,
-          leagueRepository,
-          stageRepository,
-          teamRepository,
-          refereeRepository,
-          venueRepository,
-          formationRepository
+        RoundRobinPool(numberOfActors * 2).props(
+          MatchService.props(
+            matchRepository,
+            seasonRepository,
+            leagueRepository,
+            stageRepository,
+            teamRepository,
+            refereeRepository,
+            venueRepository,
+            formationRepository
+          )
         ),
         "matchService"
       )
-      val matchStatsService = system.actorOf(MatchStatsService.props(matchStatsRepository), "matchStatsService")
-      val playerService     = system.actorOf(PlayerService.props(playerRepository, countryRepository), "playerService")
-      val refereeService    = system.actorOf(RefereeService.props(refereeRepository, countryRepository), "refereeService")
-      val seasonService     = system.actorOf(SeasonService.props(seasonRepository), "seasonService")
-      val stageService      = system.actorOf(StageService.props(stageRepository), "stageService")
-      val teamService       = system.actorOf(TeamService.props(teamRepository, countryRepository), "teamService")
-      val userService       = system.actorOf(UserService.props(userRepository), "userService")
-      val venueService      = system.actorOf(VenueService.props(venueRepository, countryRepository), "venueRepository")
+      val matchStatsService = system.actorOf(
+        RoundRobinPool(numberOfActors * 2).props(MatchStatsService.props(matchStatsRepository)),
+        "matchStatsService"
+      )
+      val playerService = system.actorOf(
+        RoundRobinPool(numberOfActors).props(PlayerService.props(playerRepository, countryRepository)),
+        "playerService"
+      )
+      val refereeService = system.actorOf(
+        RoundRobinPool(numberOfActors).props(RefereeService.props(refereeRepository, countryRepository)),
+        "refereeService"
+      )
+      val seasonService = system.actorOf(
+        RoundRobinPool(numberOfActors).props(SeasonService.props(seasonRepository)),
+        "seasonService"
+      )
+      val stageService = system.actorOf(
+        RoundRobinPool(numberOfActors).props(StageService.props(stageRepository)),
+        "stageService"
+      )
+      val teamService = system.actorOf(
+        RoundRobinPool(numberOfActors).props(TeamService.props(teamRepository, countryRepository)),
+        "teamService"
+      )
+      val userService = system.actorOf(
+        RoundRobinPool(numberOfActors).props(UserService.props(userRepository)),
+        "userService"
+      )
+      val venueService = system.actorOf(
+        RoundRobinPool(numberOfActors).props(VenueService.props(venueRepository, countryRepository)),
+        "venueRepository"
+      )
 
       val countryRouter    = new CountryRouter(countryService)
       val formationRouter  = new FormationRouter(formationService)
