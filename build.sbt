@@ -21,11 +21,12 @@ lazy val root = (project in file("."))
     name := "akka-project"
   )
 
-val akkaVersion            = "2.6.18"
-val akkaHttpVersion        = "10.2.8"
+val akkaVersion            = "2.6.20"
+val akkaHttpVersion        = "10.2.10"
 val akkaPersistenceVersion = "3.5.3"
 val circeVersion           = "0.14.1"
 val circeConfigVersion     = "0.8.0"
+val courierMailerVersion   = "3.2.0"
 val enumeratumVersion      = "1.7.0"
 val scalaTestVersion       = "3.2.9"
 val mySqlVersion           = "8.0.28"
@@ -53,7 +54,7 @@ libraryDependencies ++= Seq(
   // database migrator
   "org.flywaydb" % "flyway-core"  % flywayVersion,
   "org.flywaydb" % "flyway-mysql" % flywayVersion,
-// Slick
+  // Slick
   "com.typesafe.slick" %% "slick"          % slickVersion,
   "com.typesafe.slick" %% "slick-hikaricp" % slickVersion,
   "com.typesafe.slick" %% "slick-codegen"  % slickVersion,
@@ -64,6 +65,8 @@ libraryDependencies ++= Seq(
   "io.circe" %% "circe-config"  % circeConfigVersion,
   // enumeratum
   "com.beachape" %% "enumeratum" % enumeratumVersion,
+  // mailer
+  "com.github.daddykotex" %% "courier" % courierMailerVersion,
 )
 
 addCompilerPlugin(

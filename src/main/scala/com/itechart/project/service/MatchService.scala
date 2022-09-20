@@ -5,11 +5,13 @@ import akka.util.Timeout
 import com.itechart.project.domain.football_match.{Match, MatchId, Status}
 import com.itechart.project.domain.formation.FormationId
 import com.itechart.project.domain.league.LeagueId
+import com.itechart.project.domain.mail.Mail
 import com.itechart.project.domain.match_stats.MatchStatsId
 import com.itechart.project.domain.referee.RefereeId
 import com.itechart.project.domain.season.SeasonId
 import com.itechart.project.domain.stage.StageId
-import com.itechart.project.domain.team.TeamId
+import com.itechart.project.domain.team.{Team, TeamId}
+import com.itechart.project.domain.user.User
 import com.itechart.project.domain.venue.VenueId
 import com.itechart.project.dto.football_match.MatchApiDto
 import com.itechart.project.repository._
@@ -18,6 +20,7 @@ import com.itechart.project.service.CommonServiceMessages.Requests._
 import com.itechart.project.service.CommonServiceMessages.Responses._
 import com.itechart.project.service.domain_errors.MatchErrors.MatchError
 import com.itechart.project.service.domain_errors.MatchErrors.MatchError._
+import eu.timepit.refined.auto._
 
 import java.sql.SQLIntegrityConstraintViolationException
 import java.time.LocalDate
@@ -26,14 +29,17 @@ import scala.concurrent.{ExecutionContext, Future}
 import scala.util.{Failure, Success}
 
 class MatchService(
-  matchRepository:     MatchRepository,
-  seasonRepository:    SeasonRepository,
-  leagueRepository:    LeagueRepository,
-  stageRepository:     StageRepository,
-  teamRepository:      TeamRepository,
-  refereeRepository:   RefereeRepository,
-  venueRepository:     VenueRepository,
-  formationRepository: FormationRepository
+  matchRepository:             MatchRepository,
+  seasonRepository:            SeasonRepository,
+  leagueRepository:            LeagueRepository,
+  stageRepository:             StageRepository,
+  teamRepository:              TeamRepository,
+  refereeRepository:           RefereeRepository,
+  venueRepository:             VenueRepository,
+  formationRepository:         FormationRepository,
+  userSubscriptionsRepository: UserSubscriptionsRepository,
+  userRepository:              UserRepository,
+  mailerService:               ActorRef
 )(
   implicit ec: ExecutionContext,
   timeout:     Timeout
@@ -103,9 +109,13 @@ class MatchService(
           logErrorsAndSend(senderToReturn, matchDto, errors)
         case Right(footballMatch) =>
           val rowsUpdatedOrErrors = for {
-            errors      <- validateMatchDuplicates(footballMatch)
-            rowsUpdated <- if (errors.isEmpty) matchRepository.update(footballMatch) else Future(-1)
-            result       = if (rowsUpdated == -1) Left(errors) else Right(rowsUpdated)
+            errors        <- validateMatchDuplicates(footballMatch)
+            previousMatch <- matchRepository.findById(footballMatch.id)
+            rowsUpdated   <- if (errors.isEmpty) matchRepository.update(footballMatch) else Future(-1)
+            _ = if (rowsUpdated != -1) {
+              previousMatch.map(sendMail(_, footballMatch))
+            }
+            result = if (rowsUpdated == -1) Left(errors) else Right(rowsUpdated)
           } yield result
           rowsUpdatedOrErrors.onComplete {
             case Success(Right(rowsUpdated)) =>
@@ -138,6 +148,48 @@ class MatchService(
           senderToReturn ! InternalServerError
       }
   }
+
+  private def sendMail(previousMatch: Match, currentMatch: Match) = {
+    if (previousMatch.status != Status.InPlay && currentMatch.status == Status.InPlay) {
+      for {
+        (team1, team2) <- findTeams(currentMatch.homeTeamId, currentMatch.awayTeamId)
+        emails         <- findEmails(team1, team2)
+        _ = emails.foreach { user =>
+          mailerService ! Mail(
+            user.email,
+            "Match Started",
+            s"Match between team ${team1.name} and ${team2.name} started",
+            currentMatch.id
+          )
+        }
+      } yield ()
+    } else if (previousMatch.status == Status.InPlay && currentMatch.status == Status.Ended) {
+      for {
+        (team1, team2) <- findTeams(currentMatch.homeTeamId, currentMatch.awayTeamId)
+        emails         <- findEmails(team1, team2)
+        _ = emails.foreach { user =>
+          mailerService ! Mail(
+            user.email,
+            "Match Ended",
+            s"Match between team ${team1.name} and ${team2.name} ended",
+            currentMatch.id
+          )
+        }
+      } yield ()
+    }
+  }
+
+  private def findTeams(teamId1: TeamId, teamId2: TeamId): Future[(Team, Team)] = for {
+    team1 <- teamRepository.findById(teamId1).map(_.head)
+    team2 <- teamRepository.findById(teamId2).map(_.head)
+  } yield (team1, team2)
+
+  private def findEmails(team1: Team, team2: Team): Future[Set[User]] = for {
+    subscription1 <- userSubscriptionsRepository.findTeamSubscriptionsByTeam(team1)
+    subscription2 <- userSubscriptionsRepository.findTeamSubscriptionsByTeam(team2)
+    subscriptions  = subscription1.map(_.userId).toSet ++ subscription2.map(_.userId).toSet
+    users         <- Future.sequence(subscriptions.map(id => userRepository.findById(id).map(_.head)))
+  } yield users
 
   private def logErrorsAndSend(sender: ActorRef, matchDto: MatchApiDto, errors: List[MatchError]): Unit = {
     log.info(s"Validation of match = $matchDto failed because of: ${errors.mkString("[", ", ", "]")}")
@@ -240,14 +292,17 @@ class MatchService(
 
 object MatchService {
   def props(
-    matchRepository:     MatchRepository,
-    seasonRepository:    SeasonRepository,
-    leagueRepository:    LeagueRepository,
-    stageRepository:     StageRepository,
-    teamRepository:      TeamRepository,
-    refereeRepository:   RefereeRepository,
-    venueRepository:     VenueRepository,
-    formationRepository: FormationRepository
+    matchRepository:             MatchRepository,
+    seasonRepository:            SeasonRepository,
+    leagueRepository:            LeagueRepository,
+    stageRepository:             StageRepository,
+    teamRepository:              TeamRepository,
+    refereeRepository:           RefereeRepository,
+    venueRepository:             VenueRepository,
+    formationRepository:         FormationRepository,
+    userSubscriptionsRepository: UserSubscriptionsRepository,
+    userRepository:              UserRepository,
+    mailerService:               ActorRef
   )(
     implicit ec: ExecutionContext,
     timeout:     Timeout
@@ -260,7 +315,10 @@ object MatchService {
       teamRepository,
       refereeRepository,
       venueRepository,
-      formationRepository
+      formationRepository,
+      userSubscriptionsRepository,
+      userRepository,
+      mailerService
     )
   )
 

@@ -5,7 +5,7 @@ import akka.http.scaladsl.Http
 import akka.http.scaladsl.server.Directives._
 import akka.routing.RoundRobinPool
 import akka.util.Timeout
-import com.itechart.project.configuration.ConfigurationTypes.DatabaseConfiguration
+import com.itechart.project.configuration.ConfigurationTypes.{DatabaseConfiguration, MailerConfiguration}
 import com.itechart.project.configuration.DatabaseSettings
 import com.itechart.project.https.HttpsContext
 import com.itechart.project.https.HttpsContext.HttpsConfiguration
@@ -27,31 +27,39 @@ object StartApp extends App {
 
   val databaseSettingsEither: Either[Throwable, DatabaseConfiguration] =
     parser.decodePath[DatabaseConfiguration]("database-settings")
+  val mailerSettingsEither: Either[Throwable, MailerConfiguration] =
+    parser.decodePath[MailerConfiguration]("mailer-settings")
   val httpsSettingsEither: Either[Throwable, HttpsConfiguration] =
     parser.decodePath[HttpsConfiguration]("https-settings")
   val jwtSettingsEither: Either[Throwable, JwtConfiguration] =
     parser.decodePath[JwtConfiguration]("jwt-settings")
 
-  (databaseSettingsEither, httpsSettingsEither, jwtSettingsEither) match {
-    case (Right(databaseConfiguration), Right(httpsConfiguration), Right(jwtConfiguration)) =>
+  (databaseSettingsEither, mailerSettingsEither, httpsSettingsEither, jwtSettingsEither) match {
+    case (
+          Right(databaseConfiguration),
+          Right(mailerConfiguration),
+          Right(httpsConfiguration),
+          Right(jwtConfiguration)
+        ) =>
       val httpsConnectionContext = HttpsContext.httpsContext(httpsConfiguration)
       val migrator               = DatabaseSettings.migrator(databaseConfiguration)
       migrator.migrate()
 
       val db = DatabaseSettings.connection(databaseConfiguration)
 
-      val countryRepository    = CountryRepository.of(db)
-      val formationRepository  = FormationRepository.of(db)
-      val leagueRepository     = LeagueRepository.of(db)
-      val matchRepository      = MatchRepository.of(db)
-      val matchStatsRepository = MatchStatsRepository.of(db)
-      val playerRepository     = PlayerRepository.of(db)
-      val refereeRepository    = RefereeRepository.of(db)
-      val seasonRepository     = SeasonRepository.of(db)
-      val stageRepository      = StageRepository.of(db)
-      val teamRepository       = TeamRepository.of(db)
-      val userRepository       = UserRepository.of(db)
-      val venueRepository      = VenueRepository.of(db)
+      val countryRepository           = CountryRepository.of(db)
+      val formationRepository         = FormationRepository.of(db)
+      val leagueRepository            = LeagueRepository.of(db)
+      val matchRepository             = MatchRepository.of(db)
+      val matchStatsRepository        = MatchStatsRepository.of(db)
+      val playerRepository            = PlayerRepository.of(db)
+      val refereeRepository           = RefereeRepository.of(db)
+      val seasonRepository            = SeasonRepository.of(db)
+      val stageRepository             = StageRepository.of(db)
+      val teamRepository              = TeamRepository.of(db)
+      val userRepository              = UserRepository.of(db)
+      val userSubscriptionsRepository = UserSubscriptionsRepository.of(db)
+      val venueRepository             = VenueRepository.of(db)
 
       val numberOfActors = 5
       val jwtAuthorizationService = system.actorOf(
@@ -72,6 +80,7 @@ object StartApp extends App {
         RoundRobinPool(numberOfActors).props(LeagueService.props(leagueRepository, countryRepository)),
         "leagueService"
       )
+      val mailerService = system.actorOf(MailerService.props(mailerConfiguration), "mailerService")
       val matchService = system.actorOf(
         RoundRobinPool(numberOfActors * 2).props(
           MatchService.props(
@@ -82,7 +91,10 @@ object StartApp extends App {
             teamRepository,
             refereeRepository,
             venueRepository,
-            formationRepository
+            formationRepository,
+            userSubscriptionsRepository,
+            userRepository,
+            mailerService
           )
         ),
         "matchService"
@@ -143,7 +155,7 @@ object StartApp extends App {
         .enableHttps(httpsConnectionContext)
         .bind(routes)
 
-    case (_, _, _) =>
+    case (_, _, _, _) =>
       println("Some errors in configuration")
   }
 

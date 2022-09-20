@@ -15,4 +15,12 @@ object ConfigurationTypes {
     configurationName: String
   )
 
+  @JsonCodec
+  final case class MailerConfiguration(
+    host:     String,
+    port:     Int,
+    user:     String,
+    password: String
+  )
+
 }
